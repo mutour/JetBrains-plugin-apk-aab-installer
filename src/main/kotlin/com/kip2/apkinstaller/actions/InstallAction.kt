@@ -9,6 +9,7 @@ import com.intellij.openapi.project.Project
 import com.kip2.apkinstaller.InstallerBundle
 import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.service.DeviceManager
+import com.kip2.apkinstaller.service.ApkInstaller
 import com.kip2.apkinstaller.ui.DeviceSelectionDialog
 
 class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
@@ -51,8 +52,36 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
         
         if (targetDevices.isEmpty()) return
 
-        // TODO: Perform installation (Task 8)
-        showInfo(project, "Selected devices: ${targetDevices.joinToString { it.name }}")
+        val apkFile = file.toNioPath().toFile()
+        
+        com.intellij.openapi.progress.ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Backgroundable(
+            project,
+            "Installing APK...",
+            true,
+            com.intellij.openapi.progress.PerformInBackgroundOption.DEAF
+        ) {
+            override fun run(indicator: com.intellij.openapi.progress.ProgressIndicator) {
+                val installer = ApkInstaller()
+                val results = try {
+                    installer.install(apkFile, targetDevices, indicator)
+                } catch (ex: Exception) {
+                    showError(project, "Installation failed: ${ex.message}")
+                    return
+                }
+                
+                if (indicator.isCanceled) return
+                
+                val successCount = results.count { it.success }
+                val failedResults = results.filter { !it.success }
+                
+                if (failedResults.isEmpty()) {
+                    showInfo(project, "Successfully installed to $successCount device(s).")
+                } else {
+                    val errorMsg = failedResults.joinToString("\n") { "${it.device.name}: ${it.output.trim()}" }
+                    showError(project, "Installed to $successCount device(s). Failed on ${failedResults.size} device(s):\n$errorMsg")
+                }
+            }
+        })
     }
     
     private fun showError(project: Project, message: String) {
