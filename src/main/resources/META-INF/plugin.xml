@@ -1,0 +1,15 @@
+<idea-plugin>
+    <id>com.kip2.apkinstaller</id>
+    <name>Apk/Aab Installer</name>
+    <version>1.0.0</version>
+    <vendor>KIP2 (Developer: King)</vendor>
+    <description>Install APK/AAB files to Android devices directly from IDE</description>
+    
+    <depends>com.intellij.modules.platform</depends>
+    
+    <application-components>
+    </application-components>
+    
+    <actions>
+    </actions>
+</idea-plugin>

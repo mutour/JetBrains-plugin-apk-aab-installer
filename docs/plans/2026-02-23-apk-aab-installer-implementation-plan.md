@@ -47,7 +47,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.9.22"
 }
 
-group = "com.example"
+group = "com.kip2"
 version = "1.0.0"
 
 repositories {
@@ -91,10 +91,10 @@ Run: `gradle wrapper --gradle-version 8.4`
 
 ```xml
 <idea-plugin>
-    <id>com.example.apk-aab-installer</id>
+    <id>com.kip2.apkinstaller</id>
     <name>Apk/Aab Installer</name>
     <version>1.0.0</version>
-    <vendor>Example</vendor>
+    <vendor>KIP2 (Developer: King)</vendor>
     <description>Install APK/AAB files to Android devices directly from IDE</description>
     
     <depends>com.intellij.modules.platform</depends>
@@ -124,14 +124,14 @@ git commit -m "feat: scaffold JetBrains plugin project with Gradle"
 ### Task 2: 创建基础包结构和占位 Action
 
 **文件:**
-- Create: `src/main/kotlin/com/example/installer/InstallerBundle.kt`
-- Create: `src/main/kotlin/com/example/installer/actions/InstallAction.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/InstallerBundle.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/actions/InstallAction.kt`
 - Modify: `src/main/resources/META-INF/plugin.xml`
 
 **Step 1: 创建国际化资源 Bundle**
 
 ```kotlin
-package com.example.installer
+package com.kip2.apkinstaller
 
 import java.util.ResourceBundle
 
@@ -153,11 +153,11 @@ install.action.description=Install APK/AAB to connected Android devices
 **Step 3: 创建占位 Action**
 
 ```kotlin
-package com.example.installer.actions
+package com.kip2.apkinstaller.actions
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.example.installer.InstallerBundle
+import com.kip2.apkinstaller.InstallerBundle
 
 class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
     override fun actionPerformed(e: AnActionEvent) {
@@ -171,7 +171,7 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
 ```xml
 <actions>
     <action id="InstallApkAction" 
-            class="com.example.installer.actions.InstallAction"
+            class="com.kip2.apkinstaller.actions.InstallAction"
             text="Install to Device(s)"
             description="Install APK/AAB to connected Android devices">
         <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
@@ -198,14 +198,14 @@ git commit -m "feat: add basic action placeholder and bundle"
 ### Task 3: 实现 ADB 路径探测服务
 
 **文件:**
-- Create: `src/main/kotlin/com/example/installer/settings/PluginSettings.kt`
-- Create: `src/main/kotlin/com/example/installer/util/AdbLocator.kt`
-- Create: `src/main/kotlin/com/example/installer/util/AdbHelper.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/settings/PluginSettings.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/util/AdbLocator.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/util/AdbHelper.kt`
 
 **Step 1: 创建 PluginSettings (持久化配置)**
 
 ```kotlin
-package com.example.installer.settings
+package com.kip2.apkinstaller.settings
 
 import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.components.State
@@ -228,7 +228,7 @@ class PluginSettings {
 **Step 2: 创建 AdbLocator (路径探测)**
 
 ```kotlin
-package com.example.installer.util
+package com.kip2.apkinstaller.util
 
 import java.io.File
 import java.nio.file.Path
@@ -242,7 +242,7 @@ class AdbLocator {
     
     fun findAdb(): AdbResult {
         // 1. 检查 IDE 设置
-        val settings = com.example.installer.settings.PluginSettings.getInstance()
+        val settings = com.kip2.apkinstaller.settings.PluginSettings.getInstance()
         if (settings.adbPath.isNotBlank() && File(settings.adbPath).exists()) {
             return AdbResult(settings.adbPath, "IDE Settings")
         }
@@ -306,13 +306,13 @@ git commit -feat: implement ADB path detection service"
 ### Task 4: 实现设备检测与管理
 
 **文件:**
-- Create: `src/main/kotlin/com/example/installer/model/Device.kt`
-- Create: `src/main/kotlin/com/example/installer/service/DeviceManager.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/model/Device.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/service/DeviceManager.kt`
 
 **Step 1: 定义 Device 数据模型**
 
 ```kotlin
-package com.example.installer.model
+package com.kip2.apkinstaller.model
 
 data class Device(
     val id: String,
@@ -328,11 +328,11 @@ enum class DeviceState {
 **Step 2: 创建 DeviceManager (执行 adb devices)**
 
 ```kotlin
-package com.example.installer.service
+package com.kip2.apkinstaller.service
 
-import com.example.installer.model.Device
-import com.example.installer.model.DeviceState
-import com.example.installer.util.AdbLocator
+import com.kip2.apkinstaller.model.Device
+import com.kip2.apkinstaller.model.DeviceState
+import com.kip2.apkinstaller.util.AdbLocator
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -394,14 +394,14 @@ git commit -m "feat: implement device detection via adb devices"
 ### Task 5: 构建设置页面 UI (Settings Page)
 
 **文件:**
-- Create: `src/main/kotlin/com/example/installer/settings/SettingsComponent.kt`
-- Create: `src/main/kotlin/com/example/installer/settings/SettingsConfigurable.kt`
-- Modify: `src/main/kotlin/com/example/installer/settings/PluginSettings.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/settings/SettingsComponent.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/settings/SettingsConfigurable.kt`
+- Modify: `src/main/kotlin/com.kip2.apkinstaller/settings/PluginSettings.kt`
 
 **Step 1: 创建 SettingsComponent (Swing UI)**
 
 ```kotlin
-package com.example.installer.settings
+package com.kip2.apkinstaller.settings
 
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.components.JBLabel
@@ -439,7 +439,7 @@ class SettingsComponent {
 **Step 2: 创建 SettingsConfigurable (注册到 IDE)**
 
 ```kotlin
-package com.example.installer.settings
+package com.kip2.apkinstaller.settings
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
@@ -471,7 +471,7 @@ class SettingsConfigurable : Configurable {
 ```xml
 <application-components>
     <component>
-        <implementation-class>com.example.installer.settings.SettingsConfigurable</implementation-class>
+        <implementation-class>com.kip2.apkinstaller.settings.SettingsConfigurable</implementation-class>
     </component>
 </application-components>
 ```
@@ -494,15 +494,15 @@ git commit -m "feat: add settings page for ADB configuration"
 ### Task 6: 实现设备选择对话框
 
 **文件:**
-- Create: `src/main/kotlin/com/example/installer/ui/DeviceSelectionDialog.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/ui/DeviceSelectionDialog.kt`
 
 **Step 1: 创建 DeviceSelectionDialog (DialogWrapper)**
 
 ```kotlin
-package com.example.installer.ui
+package com.kip2.apkinstaller.ui
 
 import com.intellij.openapi.ui.DialogWrapper
-import com.example.installer.model.Device
+import com.kip2.apkinstaller.model.Device
 import javax.swing.*
 import java.awt.*
 import javax.swing.tree.RowMapper
@@ -562,21 +562,21 @@ git commit -m "feat: implement device selection dialog with checkboxes"
 ### Task 7: 实现安装 Action 核心逻辑
 
 **文件:**
-- Modify: `src/main/kotlin/com/example/installer/actions/InstallAction.kt`
+- Modify: `src/main/kotlin/com.kip2.apkinstaller/actions/InstallAction.kt`
 
 **Step 1: 更新 InstallAction 实现**
 
 ```kotlin
-package com.example.installer.actions
+package com.kip2.apkinstaller.actions
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.example.installer.InstallerBundle
-import com.example.installer.model.Device
-import com.example.installer.service.DeviceManager
-import com.example.installer.ui.DeviceSelectionDialog
-import com.example.installer.util.AdbLocator
+import com.kip2.apkinstaller.InstallerBundle
+import com.kip2.apkinstaller.model.Device
+import com.kip2.apkinstaller.service.DeviceManager
+import com.kip2.apkinstaller.ui.DeviceSelectionDialog
+import com.kip2.apkinstaller.util.AdbLocator
 
 class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
     
@@ -644,16 +644,16 @@ git commit -m "feat: implement install action with device selection logic"
 ### Task 8: 实现 APK 安装逻辑与后台任务
 
 **文件:**
-- Create: `src/main/kotlin/com/example/installer/service/ApkInstaller.kt`
-- Modify: `src/main/kotlin/com/example/installer/actions/InstallAction.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/service/ApkInstaller.kt`
+- Modify: `src/main/kotlin/com.kip2.apkinstaller/actions/InstallAction.kt`
 
 **Step 1: 创建 ApkInstaller 服务**
 
 ```kotlin
-package com.example.installer.service
+package com.kip2.apkinstaller.service
 
-import com.example.installer.model.Device
-import com.example.installer.util.AdbLocator
+import com.kip2.apkinstaller.model.Device
+import com.kip2.apkinstaller.util.AdbLocator
 import com.intellij.openapi.progress.ProgressIndicator
 import java.io.File
 import java.io.BufferedReader
@@ -758,7 +758,7 @@ git commit -m "feat: implement APK installation with background task"
     
     <!-- 新增: Editor Tab 上下文菜单 -->
     <action id="InstallApkFromEditor"
-            class="com.example.installer.actions.InstallAction"
+            class="com.kip2.apkinstaller.actions.InstallAction"
             text="Install to Device(s)">
         <add-to-group group-id="EditorTabPopupMenu" anchor="first"/>
     </action>
@@ -791,15 +791,15 @@ Commit: `git add . && git commit -m "feat: support editor tab context menu"`
 ### Task 10: 实现 Bundletool 配置与下载
 
 **文件:**
-- Create: `src/main/kotlin/com/example/installer/util/BundletoolHelper.kt`
-- Create: `src/main/kotlin/com/example/installer/ui/BundletoolSetupDialog.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/util/BundletoolHelper.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/ui/BundletoolSetupDialog.kt`
 
 **Step 1: 创建 BundletoolHelper**
 
 ```kotlin
-package com.example.installer.util
+package com.kip2.apkinstaller.util
 
-import com.example.installer.settings.PluginSettings
+import com.kip2.apkinstaller.settings.PluginSettings
 import java.io.File
 import java.net.URL
 import java.nio.file.Files
@@ -857,7 +857,7 @@ class BundletoolHelper {
 **Step 2: 创建 BundletoolSetupDialog**
 
 ```kotlin
-package com.example.installer.ui
+package com.kip2.apkinstaller.ui
 
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
@@ -899,16 +899,16 @@ git commit -m "feat: implement bundletool download and setup"
 ### Task 11: 实现 AAB 安装逻辑
 
 **文件:**
-- Create: `src/main/kotlin/com/example/installer/service/AabInstaller.kt`
+- Create: `src/main/kotlin/com.kip2.apkinstaller/service/AabInstaller.kt`
 
 **Step 1: 创建 AabInstaller**
 
 ```kotlin
-package com.example.installer.service
+package com.kip2.apkinstaller.service
 
-import com.example.installer.model.Device
-import com.example.installer.util.AdbLocator
-import com.example.installer.util.BundletoolHelper
+import com.kip2.apkinstaller.model.Device
+import com.kip2.apkinstaller.util.AdbLocator
+import com.kip2.apkinstaller.util.BundletoolHelper
 import com.intellij.openapi.progress.ProgressIndicator
 import java.io.File
 import java.io.BufferedReader
