@@ -1,40 +1,40 @@
-# JetBrains Apk/Aab Installer Plugin - Design Document
+# JetBrains Apk/Aab Installer 插件 - 设计文档
 
-## 1. Overview
-A JetBrains IntelliJ Platform plugin designed to simplify the installation of `.apk` and `.aab` (Android App Bundle) files directly from the IDE to connected Android devices.
+## 1. 概述
+一个专为 JetBrains IntelliJ 平台设计的插件，旨在简化从 IDE 将 `.apk` 和 `.aab`（Android App Bundle）文件直接安装到已连接的 Android 设备的流程。
 
-## 2. Core Features & Interaction Flow
+## 2. 核心功能与交互流程
 
-### 2.1 Entry Points (UI Integration)
-- **Project View Context Menu**: Right-clicking on any `.apk` or `.aab` file will reveal an `Install to Device(s)` action.
-- **Editor Tab Context Menu**: When an `.apk` or `.aab` file is double-clicked and opened/previewed in the editor tab, right-clicking the tab header will also provide the `Install to Device(s)` action.
+### 2.1 入口点（UI 集成）
+- **项目视图（Project View）右键菜单**：在任何 `.apk` 或 `.aab` 文件上点击右键，会显示 `Install to Device(s)`（安装到设备）操作。
+- **编辑器标签（Editor Tab）右键菜单**：当双击并在编辑器中预览 `.apk` 或 `.aab` 文件时，右键点击标签栏也会提供 `Install to Device(s)` 操作。
 
-### 2.2 Device Detection & Selection
-- **ADB Query**: Executes `adb devices` to parse the list of currently connected and online devices (ignoring offline/unauthorized devices).
-- **Single Device**: If exactly **1 device** is connected, the plugin skips the selection dialog and immediately proceeds to background installation.
-- **Multiple Devices**: If **>1 device** is connected, a modal `DialogWrapper` with a Checkbox list is presented. It includes a "Select All" toggle. Users can select the target devices, and upon confirmation, the installation proceeds to the selected targets.
+### 2.2 设备检测与选择
+- **ADB 查询**：执行 `adb devices` 命令，解析当前已连接且在线的设备列表（忽略 offline/unauthorized 状态的设备）。
+- **单设备**：如果当前仅连接了 **1 台** 设备，插件将跳过选择对话框，直接在后台执行安装。
+- **多设备**：如果连接了 **多台** 设备，将弹出一个包含复选框列表的模态对话框（DialogWrapper）。它包含一个“全选”开关。用户可以选择目标设备，确认后，插件将在后台为所有选中的目标设备进行安装。
 
-### 2.3 Installation Execution
-- **Background Tasks**: The installation process uses JetBrains' `Task.Backgroundable` API to execute off the Event Dispatch Thread (EDT), ensuring the IDE UI does not freeze.
-- **Progress UI**: A `ProgressIndicator` is shown in the IDE's bottom status bar, detailing which device is currently being installed to.
-- **Notifications**: After execution (success or failure), an IDE Notification Balloon (using `NotificationGroupManager`) will be displayed detailing the outcome.
+### 2.3 安装执行
+- **后台任务**：安装过程使用 JetBrains 的 `Task.Backgroundable` API 在非 EDT（Event Dispatch Thread）线程中执行，确保 IDE 界面不会卡顿。
+- **进度 UI**：在 IDE 底部的状态栏中显示 `ProgressIndicator` 进度条，实时展示当前正在安装的设备。
+- **通知（Notifications）**：执行结束后（无论是成功还是失败），将使用 `NotificationGroupManager` 弹出一个通知气泡，详细说明安装结果。
 
-## 3. Environment & Tooling Strategy
+## 3. 环境与工具链策略
 
-### 3.1 ADB Path Resolution
-The plugin implements a robust, prioritized detection mechanism for the `adb` executable:
-1. **IDE Settings**: Custom user configuration found in `Settings/Preferences -> Tools -> Apk/Aab Installer`.
-2. **Project Configuration**: The plugin parses the root `local.properties` file for `sdk.dir`, appending `/platform-tools/adb`.
-3. **Environment Variables**: Checks `ANDROID_HOME` and `ANDROID_SDK_ROOT`.
-4. **Global PATH**: Attempts a raw `adb` shell execution.
+### 3.1 ADB 路径探测机制
+插件为 `adb` 可执行文件实现了健壮、具有优先级的探测机制：
+1. **IDE 设置**：检查用户在 `Settings/Preferences -> Tools -> Apk/Aab Installer` 中的自定义配置。
+2. **项目配置**：解析当前项目根目录的 `local.properties` 文件，读取 `sdk.dir` 属性并拼接 `/platform-tools/adb`。
+3. **环境变量**：检查 `ANDROID_HOME` 和 `ANDROID_SDK_ROOT`。
+4. **全局 PATH**：尝试直接执行系统全局的 `adb` 命令。
 
-*Note: The Settings panel will aggregate all discovered paths into a dropdown menu, allowing users to rapidly switch between ADB environments without manual typing.*
+*注意：设置面板会将上述发现的所有路径聚合到一个下拉菜单中，允许用户无需手动输入即可快速切换不同的 ADB 环境。*
 
-### 3.2 Bundletool Handling (Phase 2: AAB)
-- To install `.aab` files, Google's `bundletool.jar` is required to build APKS and push them.
-- **Dynamic Retrieval**: If a user attempts to install an AAB and `bundletool` is not configured, the plugin will display a settings prompt.
-- **Auto-Download**: The prompt will feature an "Auto-Download" button. When clicked, the plugin downloads the latest `bundletool.jar` from GitHub Releases into a local plugin cache directory, keeping the plugin binary lightweight.
+### 3.2 Bundletool 处理（阶段 2：AAB 安装）
+- 为了安装 `.aab` 文件，需要依赖 Google 的 `bundletool.jar` 将其构建为 APKS 并推送到设备。
+- **动态获取**：如果用户尝试安装 AAB 但尚未配置 `bundletool`，插件将弹出一个设置提示框。
+- **自动下载**：该提示框将提供一个“一键下载”按钮。点击后，插件会从 GitHub Releases 下载最新版的 `bundletool.jar` 到插件的本地缓存目录中，从而保持插件安装包体积小巧。
 
-## 4. Phased Implementation Plan
-- **Phase 1**: Project scaffolding, ADB path resolution, device detection, Settings UI, and `.apk` installation logic.
-- **Phase 2**: Editor tab integration, `bundletool` dynamic downloading, and `.aab` extraction/installation logic.
+## 4. 分阶段实施计划
+- **阶段 1**：项目脚手架搭建、ADB 路径探测机制、设备检测解析、设置页面 UI 以及 `.apk` 安装核心逻辑。
+- **阶段 2**：编辑器标签栏集成、`bundletool` 动态下载机制，以及 `.aab` 的解压与安装逻辑。
