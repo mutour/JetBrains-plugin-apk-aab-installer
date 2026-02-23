@@ -10,6 +10,7 @@
     <applicationListeners>
     </applicationListeners>
     <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="ApkInstaller.NotificationGroup" displayType="BALLOON" key="apk.installer.notification.group"/>
         <applicationService serviceImplementation="com.kip2.apkinstaller.settings.PluginSettings"/>
         <projectConfigurable parentId="tools" 
                              instance="com.kip2.apkinstaller.settings.SettingsConfigurable"
