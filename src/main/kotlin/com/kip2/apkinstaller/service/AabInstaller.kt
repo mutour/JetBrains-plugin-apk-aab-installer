@@ -2,6 +2,7 @@ package com.kip2.apkinstaller.service
 import com.kip2.apkinstaller.util.AdbLocator
 import com.kip2.apkinstaller.util.BundletoolHelper
 import com.intellij.openapi.progress.ProgressIndicator
+import com.kip2.apkinstaller.model.Device
 import java.io.File
 import java.io.BufferedReader
 import java.io.InputStreamReader
