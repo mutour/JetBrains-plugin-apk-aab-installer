@@ -34,7 +34,6 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-//            sinceBuild = "252.25557"
             sinceBuild = "221"
         }
 
@@ -45,7 +44,6 @@ intellijPlatform {
 }
 
 tasks {
-    // Set the JVM compatibility versions
     withType<JavaCompile> {
         sourceCompatibility = "21"
         targetCompatibility = "21"
