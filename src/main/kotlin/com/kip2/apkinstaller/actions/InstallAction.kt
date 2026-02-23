@@ -6,6 +6,9 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.LangDataKeys
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.kip2.apkinstaller.InstallerBundle
 import com.kip2.apkinstaller.service.DeviceManager
@@ -17,7 +20,7 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
     override fun update(e: AnActionEvent) {
-        val file = e.getData(CommonDataKeys.VIRTUAL_FILE)
+        val file = getVirtualFile(e)
         if (file != null) {
             val ext = file.extension?.lowercase()
             e.presentation.isVisible = ext in listOf("apk", "aab")
@@ -28,7 +31,7 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
     
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: run {
+        val file = getVirtualFile(e) ?: run {
             showError(project, "No file selected")
             return
         }
@@ -89,6 +92,28 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
                 }
             }
         })
+    }
+
+    private fun getVirtualFile(e: AnActionEvent): com.intellij.openapi.vfs.VirtualFile? {
+        // 1. Try standard VIRTUAL_FILE key
+        var file = e.getData(CommonDataKeys.VIRTUAL_FILE)
+        if (file != null) return file
+
+        // 2. Try from Editor (for Editor Tab context menu)
+        val editor = e.getData(LangDataKeys.EDITOR)
+        if (editor != null) {
+            val document = editor.document
+            file = FileDocumentManager.getInstance().getFile(document)
+            if (file != null) return file
+        }
+
+        // 3. Try VIRTUAL_FILE_ARRAY (fallback for older versions or different contexts)
+        val files = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
+        if (!files.isNullOrEmpty()) {
+            return files.firstOrNull()
+        }
+
+        return null
     }
     
     private fun showError(project: Project, message: String) {
