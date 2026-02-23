@@ -5,26 +5,33 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.project.Project
 import com.kip2.apkinstaller.InstallerBundle
-import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.service.DeviceManager
 import com.kip2.apkinstaller.service.ApkInstaller
 import com.kip2.apkinstaller.ui.DeviceSelectionDialog
 
 class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
-    
+
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
     override fun update(e: AnActionEvent) {
-        val files = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
-        val visible = files?.any { f -> 
-            f.extension?.lowercase() in listOf("apk", "aab")
-        } ?: false
-        e.presentation.isVisible = visible
+        val file = e.getData(CommonDataKeys.VIRTUAL_FILE)
+        if (file != null) {
+            val ext = file.extension?.lowercase()
+            e.presentation.isVisible = ext in listOf("apk", "aab")
+        } else {
+            e.presentation.isVisible = false
+        }
     }
     
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
+        val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: run {
+            showError(project, "No file selected")
+            return
+        }
         
         val extension = file.extension?.lowercase() ?: return
         if (extension !in listOf("apk", "aab")) return
