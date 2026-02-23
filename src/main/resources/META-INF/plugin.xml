@@ -11,6 +11,10 @@
     </applicationListeners>
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="com.kip2.apkinstaller.settings.PluginSettings"/>
+        <projectConfigurable parentId="tools" 
+                             instance="com.kip2.apkinstaller.settings.SettingsConfigurable"
+                             id="com.kip2.apkinstaller.settings.SettingsConfigurable"
+                             displayName="Apk/Aab Installer"/>
     </extensions>
     
     <actions>
