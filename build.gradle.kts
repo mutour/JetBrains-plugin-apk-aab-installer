@@ -1,7 +1,8 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij")
-    id("org.jetbrains.kotlin.jvm") version "1.9.22"
+    id("org.jetbrains.kotlin.jvm") version "2.1.20"
+    id("org.jetbrains.intellij.platform") version "2.10.2"
+//    id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
 }
 
 group = "com.kip2"
@@ -9,36 +10,48 @@ version = "1.0.0"
 
 repositories {
     mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
+// Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
-    // compileOnly(kotlin("stdlib"))
+    intellijPlatform {
+        intellijIdea("2025.2.4")
+        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
+
+        // Add plugin dependencies for compilation here:
+
+//        composeUI()
+
+//        bundledPlugin("com.intellij.modules.json")
+    }
 }
 
-kotlin {
-    jvmToolchain(17)
-}
+intellijPlatform {
+    pluginConfiguration {
+        ideaVersion {
+//            sinceBuild = "252.25557"
+            sinceBuild = "221"
+        }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions.jvmTarget = "11"
-}
-
-intellij {
-    version.set("213.7172.25")
-    type.set("IC")
+        changeNotes = """
+            Initial version
+        """.trimIndent()
+    }
 }
 
 tasks {
-    patchPluginXml {
-        sinceBuild.set("213")
-        untilBuild.set("243.*")
+    // Set the JVM compatibility versions
+    withType<JavaCompile> {
+        sourceCompatibility = "21"
+        targetCompatibility = "21"
     }
-    withType<org.jetbrains.intellij.tasks.BuildSearchableOptionsTask>().configureEach {
-        enabled = false
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
     }
 }
