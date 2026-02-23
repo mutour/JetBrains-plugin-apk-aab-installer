@@ -25,5 +25,11 @@
                 description="Install APK/AAB to connected Android devices">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
+        <action id="InstallApkFromEditor"
+                class="com.kip2.apkinstaller.actions.InstallAction"
+                text="Install to Device(s)"
+                description="Install APK/AAB to connected Android devices">
+            <add-to-group group-id="EditorTabPopupMenu" anchor="first"/>
+        </action>
     </actions>
 </idea-plugin>
