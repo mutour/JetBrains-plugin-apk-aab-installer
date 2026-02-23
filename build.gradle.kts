@@ -12,17 +12,33 @@ repositories {
 }
 
 dependencies {
-    implementation(kotlin("stdlib"))
+    // compileOnly(kotlin("stdlib"))
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions.jvmTarget = "11"
 }
 
 intellij {
-    version.set("2023.2.5")
-    type.set("IC") // IC = IntelliJ IDEA Community
+    version.set("213.7172.25")
+    type.set("IC")
 }
 
 tasks {
     patchPluginXml {
         sinceBuild.set("213")
         untilBuild.set("243.*")
+    }
+    withType<org.jetbrains.intellij.tasks.BuildSearchableOptionsTask>().configureEach {
+        enabled = false
     }
 }

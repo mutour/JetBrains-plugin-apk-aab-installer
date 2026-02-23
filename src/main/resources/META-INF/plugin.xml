@@ -1,21 +1,18 @@
 <idea-plugin>
-    <id>com.kip2.apkinstaller</id>
+    <id>com.example.apk-aab-installer</id>
     <name>Apk/Aab Installer</name>
     <version>1.0.0</version>
-    <vendor>KIP2 (Developer: King)</vendor>
+    <vendor>Example</vendor>
     <description>Install APK/AAB files to Android devices directly from IDE</description>
     
     <depends>com.intellij.modules.platform</depends>
     
-    <application-components>
-    </application-components>
+    <applicationListeners>
+    </applicationListeners>
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="com.kip2.apkinstaller.settings.PluginSettings"/>
+    </extensions>
     
     <actions>
-        <action id="InstallApkAction" 
-                class="com.kip2.apkinstaller.actions.InstallAction"
-                text="Install to Device(s)"
-                description="Install APK/AAB to connected Android devices">
-            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
-        </action>
     </actions>
 </idea-plugin>
