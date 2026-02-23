@@ -13,6 +13,7 @@ import com.intellij.openapi.project.Project
 import com.kip2.apkinstaller.InstallerBundle
 import com.kip2.apkinstaller.service.DeviceManager
 import com.kip2.apkinstaller.service.ApkInstaller
+import com.kip2.apkinstaller.service.AabInstaller
 import com.kip2.apkinstaller.ui.DeviceSelectionDialog
 
 class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
@@ -66,14 +67,17 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
         
         com.intellij.openapi.progress.ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Backgroundable(
             project,
-            "Installing APK...",
+            "Installing package...",
             true,
             com.intellij.openapi.progress.PerformInBackgroundOption.DEAF
         ) {
             override fun run(indicator: com.intellij.openapi.progress.ProgressIndicator) {
-                val installer = ApkInstaller()
                 val results = try {
-                    installer.install(apkFile, targetDevices, indicator)
+                    if (apkFile.extension.equals("aab", ignoreCase = true)) {
+                        AabInstaller().install(apkFile, targetDevices, indicator)
+                    } else {
+                        ApkInstaller().install(apkFile, targetDevices, indicator)
+                    }
                 } catch (ex: Exception) {
                     showError(project, "Installation failed: ${ex.message}")
                     return
