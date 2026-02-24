@@ -19,8 +19,8 @@ repositories {
 dependencies {
     intellijPlatform {
 //        intellijIdea("2025.2.4")
-//        local("/Applications/Android Studio.app/Contents")
-        local("/Users/king/Applications/WebStorm.app")
+        local("/Users/king/Applications/Android Studio.app")
+//        local("/Users/king/Applications/WebStorm.app")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
 
         // Add plugin dependencies for compilation here:

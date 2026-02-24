@@ -2,6 +2,7 @@
 build/
 .idea/
 .intellijPlatform/
+.kotlin/
 *.iml
 *.iws
 *.ipr

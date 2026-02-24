@@ -19,7 +19,7 @@
     </extensions>
     
     <actions>
-        <action id="InstallApkAction" locallyShortenable="true"
+        <action id="InstallApkAction"
                 class="com.kip2.apkinstaller.actions.InstallAction"
                 text="Install to Device(s)"
                 description="Install APK/AAB to connected Android devices">

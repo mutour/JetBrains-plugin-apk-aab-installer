@@ -7,6 +7,9 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.LangDataKeys
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDirectory
+import com.intellij.psi.PsiFile
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
@@ -18,16 +21,17 @@ import com.kip2.apkinstaller.ui.DeviceSelectionDialog
 
 class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
 
-    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
     override fun update(e: AnActionEvent) {
         val file = getVirtualFile(e)
-        if (file != null) {
-            val ext = file.extension?.lowercase()
-            e.presentation.isVisible = ext in listOf("apk", "aab")
-        } else {
-            e.presentation.isVisible = false
-        }
+        val isApkOrAab = file?.extension?.lowercase() in listOf("apk", "aab")
+
+        // 让菜单项始终可见（或者至少在选中了文件的情况下可见），但根据类型决定是否启用
+//        e.presentation.isVisible = file != null
+//        e.presentation.isEnabled = isApkOrAab
+        // 只对指定文件显示
+        e.presentation.isVisible = isApkOrAab
     }
     
     override fun actionPerformed(e: AnActionEvent) {
@@ -98,25 +102,31 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
         })
     }
 
-    private fun getVirtualFile(e: AnActionEvent): com.intellij.openapi.vfs.VirtualFile? {
-        // 1. Try standard VIRTUAL_FILE key
-        var file = e.getData(CommonDataKeys.VIRTUAL_FILE)
-        if (file != null) return file
+    private fun getVirtualFile(e: AnActionEvent): VirtualFile? {
+        // 1. 尝试标准 VIRTUAL_FILE 键
+        e.getData(CommonDataKeys.VIRTUAL_FILE)?.let { return it }
 
-        // 2. Try from Editor (for Editor Tab context menu)
-        val editor = e.getData(LangDataKeys.EDITOR)
+        // 2. 尝试 VIRTUAL_FILE_ARRAY (多选情况)
+        e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)?.firstOrNull()?.let { return it }
+
+        // 3. 尝试 PSI_FILE (在 Android 视图中通常更可靠)
+        e.getData(CommonDataKeys.PSI_FILE)?.virtualFile?.let { return it }
+
+        // 4. 尝试 PSI_ELEMENT (逻辑节点可能只提供此键)
+        e.getData(CommonDataKeys.PSI_ELEMENT)?.let { element ->
+            if (element is PsiFile) return element.virtualFile
+            if (element is PsiDirectory) return element.virtualFile
+        }
+
+        // 5. 尝试 NAVIGATABLE
+        val navigatable = e.getData(CommonDataKeys.NAVIGATABLE)
+        if (navigatable is PsiFile) return navigatable.virtualFile
+
+        // 6. 尝试从 Editor 获取 (用于 Editor Tab 右键菜单)
+        val editor = e.getData(CommonDataKeys.EDITOR)
         if (editor != null) {
-            val document = editor.document
-            file = FileDocumentManager.getInstance().getFile(document)
-            if (file != null) return file
+            return FileDocumentManager.getInstance().getFile(editor.document)
         }
-
-        // 3. Try VIRTUAL_FILE_ARRAY (fallback for older versions or different contexts)
-        val files = e.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)
-        if (!files.isNullOrEmpty()) {
-            return files.firstOrNull()
-        }
-
         return null
     }
     
