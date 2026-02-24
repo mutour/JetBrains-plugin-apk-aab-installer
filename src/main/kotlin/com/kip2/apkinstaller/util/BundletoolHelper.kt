@@ -1,6 +1,7 @@
 package com.kip2.apkinstaller.util
 
 import com.google.gson.JsonParser
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.io.HttpRequests
 import com.kip2.apkinstaller.settings.PluginSettings
@@ -40,8 +41,9 @@ class BundletoolHelper {
         if (pathEnv != null) {
             val systemPaths = pathEnv.split(File.pathSeparator)
             for (p in systemPaths) {
-                val bt = File(p, "bundletool")
-                if (bt.exists() && bt.isFile) {
+                val names = if (SystemInfo.isWindows) listOf("bundletool.exe", "bundletool.bat", "bundletool.cmd", "bundletool") else listOf("bundletool")
+                val bt = names.map { File(p, it) }.firstOrNull { it.exists() && it.isFile }
+                if (bt != null) {
                     paths.add(bt.absolutePath)
                 }
             }

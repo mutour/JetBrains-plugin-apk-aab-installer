@@ -1,6 +1,7 @@
 package com.kip2.apkinstaller.util
 
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.util.SystemInfo
 import java.io.File
 import java.util.Properties
 
@@ -38,7 +39,7 @@ class AdbLocator {
         if (pathEnv != null) {
             val systemPaths = pathEnv.split(File.pathSeparator)
             for (p in systemPaths) {
-                val adb = File(p, "adb")
+                val adb = File(p, if (SystemInfo.isWindows) "adb.exe" else "adb")
                 if (adb.exists() && adb.isFile) {
                     paths.add(adb.absolutePath)
                 }
@@ -46,11 +47,13 @@ class AdbLocator {
         }
 
         // 5. Common locations on macOS/Linux/Windows
+        val adbName = if (SystemInfo.isWindows) "adb.exe" else "adb"
         val commonLocations = listOf(
-            File(System.getProperty("user.home"), "Library/Android/sdk/platform-tools/adb"),
-            File(System.getProperty("user.home"), "AppData/Local/Android/Sdk/platform-tools/adb.exe"),
-            File("/usr/local/bin/adb"),
-            File("/usr/bin/adb")
+            File(System.getProperty("user.home"), "Library/Android/sdk/platform-tools/$adbName"),
+            File(System.getProperty("user.home"), "AppData/Local/Android/Sdk/platform-tools/$adbName"),
+            File(System.getProperty("user.home"), "Android/Sdk/platform-tools/$adbName"),
+            File("/usr/local/bin/$adbName"),
+            File("/usr/bin/$adbName")
         )
         commonLocations.filter { it.exists() }.forEach { paths.add(it.absolutePath) }
         
@@ -67,7 +70,7 @@ class AdbLocator {
                 localPropsFile.inputStream().use { properties.load(it) }
                 val sdkDir = properties.getProperty("sdk.dir")
                 if (sdkDir != null) {
-                    val adb = File(sdkDir, "platform-tools/adb")
+                    val adb = File(sdkDir, "platform-tools/${if (SystemInfo.isWindows) "adb.exe" else "adb"}")
                     if (adb.exists()) {
                         return AdbResult(adb.absolutePath, "local.properties")
                     }
@@ -81,7 +84,7 @@ class AdbLocator {
         val androidHome = System.getenv("ANDROID_HOME") 
             ?: System.getenv("ANDROID_SDK_ROOT") 
             ?: return null
-        val adb = File(androidHome, "platform-tools/adb")
+        val adb = File(androidHome, "platform-tools/${if (SystemInfo.isWindows) "adb.exe" else "adb"}")
         return if (adb.exists()) AdbResult(adb.absolutePath, "ANDROID_HOME") else null
     }
     
@@ -89,7 +92,7 @@ class AdbLocator {
         val pathEnv = System.getenv("PATH") ?: return null
         val paths = pathEnv.split(File.pathSeparator)
         for (p in paths) {
-            val adb = File(p, "adb")
+            val adb = File(p, if (SystemInfo.isWindows) "adb.exe" else "adb")
             if (adb.exists() && adb.isFile) {
                 return AdbResult(adb.absolutePath, "System PATH")
             }

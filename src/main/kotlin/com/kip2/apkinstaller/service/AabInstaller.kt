@@ -3,6 +3,8 @@ package com.kip2.apkinstaller.service
 import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.util.AdbLocator
 import com.kip2.apkinstaller.util.BundletoolHelper
+import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.util.ExecUtil
 import com.intellij.openapi.progress.ProgressIndicator
 import com.kip2.apkinstaller.InstallerBundle
 import com.kip2.apkinstaller.ui.compose.AabInstallOptions
@@ -87,9 +89,10 @@ class AabInstaller(
             cmd.add("--key-pass=pass:${kp}")
         }
 
-        val process = ProcessBuilder(cmd).redirectErrorStream(true).start()
-        val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
+        val commandLine = GeneralCommandLine(cmd)
+        val outputResult = ExecUtil.execAndGetOutput(commandLine)
+        val output = outputResult.stdout + outputResult.stderr
+        val exitCode = outputResult.exitCode
 
         if (exitCode != 0) {
             // Cleanup on failure
@@ -124,9 +127,10 @@ class AabInstaller(
         // If we really wanted to use ADB directly, we would need to unzip the .apks file first.
         // But using bundletool is cleaner.
 
-        val process = ProcessBuilder(cmd).redirectErrorStream(true).start()
-        val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
+        val commandLine = GeneralCommandLine(cmd)
+        val outputResult = ExecUtil.execAndGetOutput(commandLine)
+        val output = outputResult.stdout + outputResult.stderr
+        val exitCode = outputResult.exitCode
 
         return ApkInstaller.InstallResult(
             device = device,
