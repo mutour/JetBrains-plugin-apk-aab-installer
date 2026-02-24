@@ -47,19 +47,35 @@ class InstallAction : AnAction() {
         val extension = file.extension?.lowercase() ?: return
         if (extension !in listOf("apk", "aab")) return
 
-        val deviceManager = DeviceManager()
-        val devices = try {
-            deviceManager.getDevices()
-        } catch (ex: Exception) {
-            showError(project, "Failed to get devices: ${ex.message}")
-            return
-        }
+        // Use Task.Modal to fetch devices to prevent EDT freeze
+        com.intellij.openapi.progress.ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Modal(project, "Scanning for Devices...", true) {
+            override fun run(indicator: com.intellij.openapi.progress.ProgressIndicator) {
+                indicator.isIndeterminate = true
+                val deviceManager = DeviceManager()
+                val devices = try {
+                    deviceManager.getDevices()
+                } catch (ex: Exception) {
+                    com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
+                        showError(project, "Failed to get devices: ${ex.message}")
+                    }
+                    return
+                }
 
-        if (devices.isEmpty()) {
-            showError(project, "No devices connected")
-            return
-        }
+                if (devices.isEmpty()) {
+                    com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
+                        showError(project, "No devices connected")
+                    }
+                    return
+                }
 
+                com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
+                    handleDevices(project, file, devices, extension)
+                }
+            }
+        })
+    }
+
+    private fun handleDevices(project: Project, file: VirtualFile, devices: List<com.kip2.apkinstaller.model.Device>, extension: String) {
         if (extension == "aab") {
             val bundletoolPath = com.kip2.apkinstaller.util.BundletoolHelper().getBundletoolPath()
             if (bundletoolPath == null) {
@@ -105,8 +121,6 @@ class InstallAction : AnAction() {
         }
 
         if (finalTargetDevices.isEmpty()) return
-
-
 
         com.intellij.openapi.progress.ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Backgroundable(
             project,
