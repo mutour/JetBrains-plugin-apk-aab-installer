@@ -14,6 +14,9 @@ import com.kip2.apkinstaller.service.SigningConfig
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.*
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileChooser.FileChooser
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+
 
 @Composable
 fun SigningForm(
@@ -132,9 +135,9 @@ fun SigningForm(
             if (project != null) {
                 Spacer(Modifier.width(8.dp))
                 DefaultButton(onClick = {
-                    val descriptor = com.intellij.openapi.filechooser.FileChooserDescriptorFactory.createSingleFileDescriptor()
+                    val descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor()
                     descriptor.title = "Select Keystore File"
-                    com.intellij.openapi.filechooser.FileChooser.chooseFile(descriptor, project, null) { file ->
+                    FileChooser.chooseFile(descriptor, project, null) { file ->
                         storeFileState.setTextAndPlaceCursorAtEnd(file.path)
                     }
                 }) {

@@ -9,6 +9,9 @@ import com.kip2.apkinstaller.service.SigningConfig
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.component.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class AabInstallOptions(
     val selectedDevices: List<com.kip2.apkinstaller.model.Device>,
@@ -17,10 +20,6 @@ data class AabInstallOptions(
     val localTesting: Boolean,
     val updateExisting: Boolean
 )
-
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun AabInstallScreen(
@@ -32,8 +31,8 @@ fun AabInstallScreen(
 ) {
     var selectedDevices by remember { mutableStateOf(emptyList<Device>()) }
     // Initialize with first config if available, otherwise default manual
-    var signingConfig by remember { 
-        mutableStateOf(if (detectedConfigs.isNotEmpty()) detectedConfigs[0] else SigningConfig("manual", "", "", "", "", "manual")) 
+    var signingConfig by remember {
+        mutableStateOf(if (detectedConfigs.isNotEmpty()) detectedConfigs[0] else SigningConfig("manual", "", "", "", "", "manual"))
     }
     var configs by remember { mutableStateOf(detectedConfigs) }
     val coroutineScope = rememberCoroutineScope()
@@ -75,7 +74,7 @@ fun AabInstallScreen(
                             mutable.add(newConfig)
                         }
                         configs = mutable.toList()
-                        
+
                         // Save immediately
                         if (project != null) {
                             com.kip2.apkinstaller.settings.ProjectSigningSettings.getInstance(project).addConfig(newConfig)
@@ -91,12 +90,12 @@ fun AabInstallScreen(
                                 val currentCustoms = configs.filter { it.moduleName == "User" || it.name == "Custom" }
                                 val merged = (detected + currentCustoms).distinctBy { "${it.moduleName}:${it.name}" }
                                 configs = merged
-                                
+
                                 // Auto-select first if available and current is invalid or manual
                                 if (merged.isNotEmpty() && (signingConfig.name == "manual" || signingConfig.name.isEmpty())) {
                                     signingConfig = merged[0]
                                 }
-                                
+
                                 // Save to project settings
                                 com.kip2.apkinstaller.settings.ProjectSigningSettings.getInstance(project).saveConfigs(merged)
                             }

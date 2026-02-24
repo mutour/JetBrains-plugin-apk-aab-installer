@@ -8,6 +8,8 @@ import org.jetbrains.jewel.bridge.JewelComposePanel
 import org.jetbrains.jewel.bridge.theme.SwingBridgeTheme
 import javax.swing.JComponent
 
+import java.awt.Dimension
+
 class DeviceSelectionDialog(
     project: Project,
     private val devices: List<Device>
@@ -21,7 +23,7 @@ class DeviceSelectionDialog(
     }
 
     override fun createCenterPanel(): JComponent {
-        return JewelComposePanel(focusOnClickInside = true) {
+        val panel = JewelComposePanel(focusOnClickInside = true) {
             @Suppress("DEPRECATION_ERROR")
             SwingBridgeTheme {
                 ApkInstallScreen(
@@ -36,6 +38,8 @@ class DeviceSelectionDialog(
                 )
             }
         }
+        panel.preferredSize = Dimension(400, 300)
+        return panel
     }
 
     override fun createActions(): Array<javax.swing.Action> = emptyArray()
