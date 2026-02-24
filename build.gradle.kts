@@ -32,6 +32,9 @@ dependencies {
 }
 
 intellijPlatform {
+    // 设置沙盒目录, 默认build/idea-sandbox
+//    sandboxContainer = layout.projectDirectory.dir(".sandbox")
+
     pluginConfiguration {
         ideaVersion {
             sinceBuild = "221"
