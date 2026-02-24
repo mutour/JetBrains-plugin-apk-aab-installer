@@ -183,7 +183,8 @@ private fun MyToolWindowContent(project: Project) {
                         if (dragData is androidx.compose.ui.DragData.FilesList) {
                             val files = dragData.readFiles()
                             if (files.isNotEmpty()) {
-                                val file = File(URI.create(files[0]))
+                                val path = files[0]
+                                val file = if (path.startsWith("file:")) File(URI.create(path)) else File(path)
                                 handleFileInstall(project, file)
                             }
                         }
