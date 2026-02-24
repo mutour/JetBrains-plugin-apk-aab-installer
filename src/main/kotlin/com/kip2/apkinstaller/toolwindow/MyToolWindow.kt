@@ -1,6 +1,7 @@
 package com.kip2.apkinstaller.toolwindow
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +20,8 @@ import androidx.compose.ui.unit.sp
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileChooser.FileChooser
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -47,56 +50,76 @@ import org.jetbrains.jewel.ui.component.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.dnd.*
 import java.io.File
-import java.net.URI
+import java.awt.BorderLayout
+import javax.swing.JPanel
+import javax.swing.TransferHandler
+import javax.swing.TransferHandler.TransferSupport
 
 class MyToolWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val isDragging = mutableStateOf(false)
-        val panel = JewelComposePanel(focusOnClickInside = true) {
-            MyToolWindowContent(project, isDragging)
+
+        val onFileSelect = {
+            val descriptor = FileChooserDescriptorFactory.createSingleFileNoJarsDescriptor()
+                .withTitle("Select APK or AAB")
+                .withDescription("Choose an .apk or .aab file to install")
+                .withFileFilter { file -> file.extension?.lowercase() in listOf("apk", "aab") }
+            
+            val file = FileChooser.chooseFile(descriptor, project, null)
+            if (file != null) {
+                handleFileInstall(project, File(file.path))
+            }
         }
 
-        panel.dropTarget = object : DropTarget() {
-            override fun dragEnter(dtde: DropTargetDragEvent) {
-                isDragging.value = true
-                dtde.acceptDrag(DnDConstants.ACTION_COPY)
+        val composePanel = JewelComposePanel(focusOnClickInside = true) {
+            MyToolWindowContent(project, isDragging, onFileSelect)
+        }
+
+        // Wrap ComposePanel in a standard JPanel to support TransferHandler
+        val mainPanel = JPanel(BorderLayout())
+        mainPanel.add(composePanel, BorderLayout.CENTER)
+
+        // Use TransferHandler instead of DropTarget for reliable DnD
+        mainPanel.transferHandler = object : TransferHandler() {
+            override fun canImport(support: TransferSupport): Boolean {
+                val canImport = support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
+                isDragging.value = canImport
+                return canImport
             }
 
-            override fun dragExit(dte: DropTargetEvent) {
+            override fun importData(support: TransferSupport): Boolean {
                 isDragging.value = false
-            }
+                if (!canImport(support)) return false
 
-            override fun drop(dtde: DropTargetDropEvent) {
-                isDragging.value = false
-                try {
-                    dtde.acceptDrop(DnDConstants.ACTION_COPY)
-                    val transferable = dtde.transferable
-                    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                        val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<*>
-                        val file = files.firstOrNull() as? File
-                        if (file != null) {
-                            handleFileInstall(project, file)
-                        }
-                        dtde.dropComplete(true)
+                return try {
+                    val files = support.transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<*>
+                    val file = files.firstOrNull() as? File
+                    if (file != null) {
+                        handleFileInstall(project, file)
+                        true
                     } else {
-                        dtde.dropComplete(false)
+                        false
                     }
                 } catch (e: Exception) {
-                    dtde.dropComplete(false)
+                    false
                 }
             }
         }
 
-        val content = ContentFactory.getInstance().createContent(panel, "Installer & Settings", false)
+        val content = ContentFactory.getInstance().createContent(mainPanel, "Installer & Settings", false)
         toolWindow.contentManager.addContent(content)
     }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun MyToolWindowContent(project: Project, isDraggingState: MutableState<Boolean>) {
+private fun MyToolWindowContent(
+    project: Project, 
+    isDraggingState: MutableState<Boolean>,
+    onFileSelect: () -> Unit
+) {
     val settings = PluginSettings.getInstance()
     val adbPathState = rememberTextFieldState(settings.adbPath)
     val bundletoolPathState = rememberTextFieldState(settings.bundletoolPath)
@@ -210,12 +233,13 @@ private fun MyToolWindowContent(project: Project, isDraggingState: MutableState<
                     width = 2.dp,
                     color = if (isDragging) JewelTheme.globalColors.borders.focused else JewelTheme.globalColors.borders.normal,
                     shape = RoundedCornerShape(8.dp)
-                ),
+                )
+                .clickable(onClick = onFileSelect),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = if (isDragging) "Drop to Install" else "Drag APK or AAB here to install",
+                    text = if (isDragging) "Drop to Install" else "Drag APK or AAB here to install\nOr click to select",
                     style = JewelTheme.defaultTextStyle.copy(fontSize = 14.sp),
                     textAlign = TextAlign.Center
                 )
