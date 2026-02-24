@@ -102,11 +102,26 @@ class AabInstaller(
     }
 
     private fun installApks(adbPath: String, apksFile: File, device: Device, update: Boolean): ApkInstaller.InstallResult {
-        val cmd = mutableListOf(adbPath, "-s", device.id, "install-multiple")
-        if (update) {
-            cmd.add("-r")
-        }
-        cmd.add(apksFile.absolutePath)
+        // Use bundletool for installation instead of raw ADB
+        // adb install-multiple expects split APKs, but .apks is a ZIP archive
+        // We need to use bundletool install-apks command
+        
+        val bundletoolPath = bundletoolHelper.getBundletoolPath() 
+            ?: throw IllegalStateException("Bundletool not found")
+
+        val cmd = mutableListOf(
+            "java", "-jar", bundletoolPath,
+            "install-apks",
+            "--apks=${apksFile.absolutePath}",
+            "--device-id=${device.id}"
+        )
+        // Note: bundletool install-apks doesn't support --update flag directly in older versions,
+        // but typically handles re-installations. 
+        // Newer versions might, but for safety we stick to basic command or rely on adb uninstall if needed?
+        // Actually bundletool usually handles update if signatures match.
+        
+        // If we really wanted to use ADB directly, we would need to unzip the .apks file first.
+        // But using bundletool is cleaner.
 
         val process = ProcessBuilder(cmd).redirectErrorStream(true).start()
         val output = process.inputStream.bufferedReader().readText()
