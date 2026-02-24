@@ -37,10 +37,15 @@ class AabInstaller(
             indicator.text = "Installing to ${device.name}..."
             indicator.fraction = 0.5 + index.toDouble() / devices.size * 0.5
 
-            val result = installApks(adbPath, apksFile, device, options.updateExisting)
-            results.add(result)
-
-            apksFile.delete()
+            // Ensure file is deleted even if installation fails
+            try {
+                val result = installApks(adbPath, apksFile, device, options.updateExisting)
+                results.add(result)
+            } finally {
+                if (apksFile.exists()) {
+                    apksFile.delete()
+                }
+            }
         }
         return results
     }
@@ -52,6 +57,9 @@ class AabInstaller(
         options: AabInstallOptions
     ): File {
         val outputFile = File.createTempFile("output", ".apks")
+        // Bundletool expects the file to NOT exist, so we delete it immediately after creating the handle
+        outputFile.delete()
+        
         val cmd = mutableListOf(
             "java", "-jar", bundletoolPath,
             "build-apks",
@@ -83,6 +91,10 @@ class AabInstaller(
         val exitCode = process.waitFor()
 
         if (exitCode != 0) {
+            // Cleanup on failure
+            if (outputFile.exists()) {
+                outputFile.delete()
+            }
             throw RuntimeException("Failed to build APKS: $output")
         }
 
