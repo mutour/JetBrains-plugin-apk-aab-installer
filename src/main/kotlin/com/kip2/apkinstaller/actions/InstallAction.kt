@@ -19,7 +19,7 @@ import com.kip2.apkinstaller.service.ApkInstaller
 import com.kip2.apkinstaller.service.AabInstaller
 import com.kip2.apkinstaller.ui.DeviceSelectionDialog
 
-class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
+class InstallAction : AnAction() {
 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
@@ -33,17 +33,17 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
         // 只对指定文件显示
         e.presentation.isVisible = isApkOrAab
     }
-    
+
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val file = getVirtualFile(e) ?: run {
             showError(project, "No file selected")
             return
         }
-        
+
         val extension = file.extension?.lowercase() ?: return
         if (extension !in listOf("apk", "aab")) return
-        
+
         val deviceManager = DeviceManager()
         val devices = try {
             deviceManager.getDevices()
@@ -51,12 +51,12 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
             showError(project, "Failed to get devices: ${ex.message}")
             return
         }
-        
+
         if (devices.isEmpty()) {
             showError(project, "No devices connected")
             return
         }
-        
+
         val targetDevices = if (devices.size == 1) {
             devices
         } else {
@@ -64,11 +64,11 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
             if (!dialog.showAndGet()) return
             dialog.getSelectedDevices()
         }
-        
+
         if (targetDevices.isEmpty()) return
 
         val apkFile = file.toNioPath().toFile()
-        
+
         com.intellij.openapi.progress.ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Backgroundable(
             project,
             "Installing package...",
@@ -86,12 +86,12 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
                     showError(project, "Installation failed: ${ex.message}")
                     return
                 }
-                
+
                 if (indicator.isCanceled) return
-                
+
                 val successCount = results.count { it.success }
                 val failedResults = results.filter { !it.success }
-                
+
                 if (failedResults.isEmpty()) {
                     showInfo(project, "Successfully installed to $successCount device(s).")
                 } else {
@@ -129,7 +129,7 @@ class InstallAction : AnAction(InstallerBundle.message("install.action.text")) {
         }
         return null
     }
-    
+
     private fun showError(project: Project, message: String) {
         NotificationGroupManager.getInstance()
             .getNotificationGroup("ApkInstaller.NotificationGroup")

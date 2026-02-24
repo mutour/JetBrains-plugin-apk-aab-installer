@@ -1,9 +1,16 @@
 package com.kip2.apkinstaller
 
-import java.util.ResourceBundle
+import com.intellij.DynamicBundle
+import org.jetbrains.annotations.NonNls
+import org.jetbrains.annotations.PropertyKey
 
-object InstallerBundle {
-    private val bundle = ResourceBundle.getBundle("messages.InstallerBundle")
-    
-    fun message(key: String): String = bundle.getString(key)
+
+@NonNls
+private const val BUNDLE = "messages.InstallerBundle"
+
+object InstallerBundle : DynamicBundle(BUNDLE) {
+    @JvmStatic
+    fun message(@PropertyKey(resourceBundle = BUNDLE) key: String, vararg params: Any): String {
+        return getMessage(key, *params)
+    }
 }

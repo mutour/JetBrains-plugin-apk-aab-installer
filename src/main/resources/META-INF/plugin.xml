@@ -4,31 +4,27 @@
     <version>1.0.0</version>
     <vendor>KIP2 (Developer: King)</vendor>
     <description>Install APK/AAB files to Android devices directly from IDE</description>
-    
+
     <depends>com.intellij.modules.platform</depends>
-    
+
+    <resource-bundle>messages.InstallerBundle</resource-bundle>
+
     <applicationListeners>
     </applicationListeners>
     <extensions defaultExtensionNs="com.intellij">
-        <notificationGroup id="ApkInstaller.NotificationGroup" displayType="BALLOON" key="apk.installer.notification.group"/>
+        <notificationGroup id="ApkInstaller.NotificationGroup" displayType="BALLOON" bundle="messages.InstallerBundle" key="apk.installer.notification.group"/>
         <applicationService serviceImplementation="com.kip2.apkinstaller.settings.PluginSettings"/>
-        <projectConfigurable parentId="tools" 
+        <projectConfigurable parentId="tools"
                              instance="com.kip2.apkinstaller.settings.SettingsConfigurable"
                              id="com.kip2.apkinstaller.settings.SettingsConfigurable"
-                             displayName="Apk/Aab Installer"/>
+                             key="settings.display.name"/>
     </extensions>
-    
+
     <actions>
-        <action id="InstallApkAction"
-                class="com.kip2.apkinstaller.actions.InstallAction"
-                text="Install to Device(s)"
-                description="Install APK/AAB to connected Android devices">
+        <action id="InstallApkAction" class="com.kip2.apkinstaller.actions.InstallAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
-        <action id="InstallApkFromEditor"
-                class="com.kip2.apkinstaller.actions.InstallAction"
-                text="Install to Device(s)"
-                description="Install APK/AAB to connected Android devices">
+        <action id="InstallApkFromEditor" class="com.kip2.apkinstaller.actions.InstallAction">
             <add-to-group group-id="EditorTabPopupMenu" anchor="first"/>
         </action>
     </actions>
