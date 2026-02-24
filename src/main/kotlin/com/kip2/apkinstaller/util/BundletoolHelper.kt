@@ -7,17 +7,35 @@ import java.net.URL
 class BundletoolHelper {
     
     fun getBundletoolPath(): String? {
+        return findBundletoolPaths().firstOrNull()
+    }
+
+    fun findBundletoolPaths(): List<String> {
+        val paths = mutableSetOf<String>()
         val settings = PluginSettings.getInstance()
+        
         if (settings.bundletoolPath.isNotBlank() && File(settings.bundletoolPath).exists()) {
-            return settings.bundletoolPath
+            paths.add(settings.bundletoolPath)
         }
         
         val defaultPath = getDefaultCachePath()
         if (File(defaultPath).exists()) {
-            return defaultPath
+            paths.add(defaultPath)
+        }
+
+        // Check system path
+        val pathEnv = System.getenv("PATH")
+        if (pathEnv != null) {
+            val systemPaths = pathEnv.split(File.pathSeparator)
+            for (p in systemPaths) {
+                val bt = File(p, "bundletool")
+                if (bt.exists() && bt.isFile) {
+                    paths.add(bt.absolutePath)
+                }
+            }
         }
         
-        return null
+        return paths.toList()
     }
     
     fun downloadBundletool(progressIndicator: com.intellij.openapi.progress.ProgressIndicator): File {

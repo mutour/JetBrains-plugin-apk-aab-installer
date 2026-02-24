@@ -1,45 +1,44 @@
 package com.kip2.apkinstaller.service
 
+import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.util.ExecUtil
 import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.model.DeviceState
 import com.kip2.apkinstaller.util.AdbLocator
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 class DeviceManager(private val adbLocator: AdbLocator = AdbLocator()) {
     
     fun getDevices(): List<Device> {
-        val adbResult = adbLocator.findAdb()
-        val adbPath = adbResult.path 
-            ?: throw IllegalStateException("ADB not found: ${adbResult.source}")
-        
-        val process = ProcessBuilder(adbPath, "devices")
-            .redirectErrorStream(true)
-            .start()
-        
-        val reader = BufferedReader(InputStreamReader(process.inputStream))
+        val adbPath = adbLocator.findAdb().path ?: return emptyList()
+
+        val commandLine = GeneralCommandLine(adbPath, "devices")
+        val output = ExecUtil.execAndGetOutput(commandLine)
         val devices = mutableListOf<Device>()
-        
-        reader.useLines { lines ->
-            lines.drop(1) // Skip "List of devices attached"
-                .filter { it.isNotBlank() }
-                .forEach { line ->
-                    val parts = line.split("\\s+".toRegex())
-                    if (parts.size >= 2) {
-                        val id = parts[0]
-                        val stateStr = parts[1]
-                        val state = when (stateStr) {
-                            "device" -> DeviceState.ONLINE
-                            "offline" -> DeviceState.OFFLINE
-                            else -> DeviceState.UNAUTHORIZED
-                        }
-                        devices.add(Device(id = id, name = id, state = state))
-                    }
+        output.stdoutLines.drop(1).filter { it.isNotBlank() }.forEach { line ->
+            val parts = line.split("\\s+".toRegex())
+            if (parts.size >= 2) {
+                val id = parts[0]
+                val state = when (parts[1]) {
+                    "device" -> DeviceState.ONLINE
+                    "offline" -> DeviceState.OFFLINE
+                    else -> DeviceState.UNAUTHORIZED
                 }
+
+                if (state == DeviceState.ONLINE) {
+                    val model = getDeviceProperty(adbPath, id, "ro.product.model") ?: "Unknown"
+                    val apiLevel = getDeviceProperty(adbPath, id, "ro.build.version.sdk") ?: "Unknown"
+                    devices.add(Device(id, id, model, apiLevel, state))
+                } else {
+                    devices.add(Device(id, id, "Unknown", "Unknown", state))
+                }
+            }
         }
-        
-        process.waitFor()
-        
         return devices
+    }
+
+    private fun getDeviceProperty(adbPath: String, deviceId: String, property: String): String? {
+        val commandLine = GeneralCommandLine(adbPath, "-s", deviceId, "shell", "getprop", property)
+        val output = ExecUtil.execAndGetOutput(commandLine)
+        return if (output.exitCode == 0) output.stdout.trim() else null
     }
 }

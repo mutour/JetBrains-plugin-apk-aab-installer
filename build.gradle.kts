@@ -1,8 +1,8 @@
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.1.20"
-    id("org.jetbrains.intellij.platform") version "2.10.2"
-//    id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
+    id("org.jetbrains.intellij.platform") version "2.11.0"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
 }
 
 group = "com.kip2"
@@ -19,23 +19,21 @@ repositories {
 dependencies {
     intellijPlatform {
 //        intellijIdea("2025.2.4")
-        local("/Users/king/Applications/Android Studio.app")
-//        local("/Users/king/Applications/WebStorm.app")
+//        local("/Users/king/Applications/Android Studio.app")
+        local("/Users/king/Applications/WebStorm.app")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
 
-        // Add plugin dependencies for compilation here:
-
-//        composeUI()
-
-//        bundledPlugin("com.intellij.modules.json")
+        // Compose support provided by the platform
+        @Suppress("UnstableApiUsage")
+        composeUI()
     }
 }
 
 intellijPlatform {
-    // 设置沙盒目录, 默认build/idea-sandbox
-//    sandboxContainer = layout.projectDirectory.dir(".sandbox")
-
     pluginConfiguration {
+        id = "com.kip2.apkinstaller"
+        name = "Apk/Aab Installer"
+        
         ideaVersion {
             sinceBuild = "221"
         }
@@ -47,6 +45,7 @@ intellijPlatform {
 }
 
 tasks {
+    // Set the JVM compatibility versions
     withType<JavaCompile> {
         sourceCompatibility = "21"
         targetCompatibility = "21"

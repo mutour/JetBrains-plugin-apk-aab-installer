@@ -12,25 +12,49 @@ class AdbLocator {
     )
     
     fun findAdb(): AdbResult {
+        val paths = findAdbPaths()
+        return if (paths.isNotEmpty()) {
+            AdbResult(paths.first(), "Auto-detected")
+        } else {
+            AdbResult(null, "Not found")
+        }
+    }
+
+    fun findAdbPaths(): List<String> {
+        val paths = mutableSetOf<String>()
         // 1. Check IDE Settings
         val settings = com.kip2.apkinstaller.settings.PluginSettings.getInstance()
         if (settings.adbPath.isNotBlank() && File(settings.adbPath).exists()) {
-            return AdbResult(settings.adbPath, "IDE Settings")
+            paths.add(settings.adbPath)
         }
         
-        // 2. Check local.properties from open projects
-        val localProperties = findInLocalProperties()
-        if (localProperties != null) return localProperties
+        // 2. Check local.properties
+        findInLocalProperties()?.path?.let { paths.add(it) }
         
-        // 3. Check ANDROID_HOME environment variable
-        val envAdb = findInAndroidHome()
-        if (envAdb != null) return envAdb
-        
+        // 3. Check ANDROID_HOME
+        findInAndroidHome()?.path?.let { paths.add(it) }
         // 4. Check system PATH
-        val pathAdb = findInSystemPath()
-        if (pathAdb != null) return pathAdb
+        val pathEnv = System.getenv("PATH")
+        if (pathEnv != null) {
+            val systemPaths = pathEnv.split(File.pathSeparator)
+            for (p in systemPaths) {
+                val adb = File(p, "adb")
+                if (adb.exists() && adb.isFile) {
+                    paths.add(adb.absolutePath)
+                }
+            }
+        }
+
+        // 5. Common locations on macOS/Linux/Windows
+        val commonLocations = listOf(
+            File(System.getProperty("user.home"), "Library/Android/sdk/platform-tools/adb"),
+            File(System.getProperty("user.home"), "AppData/Local/Android/Sdk/platform-tools/adb.exe"),
+            File("/usr/local/bin/adb"),
+            File("/usr/bin/adb")
+        )
+        commonLocations.filter { it.exists() }.forEach { paths.add(it.absolutePath) }
         
-        return AdbResult(null, "Not found")
+        return paths.toList()
     }
     
     private fun findInLocalProperties(): AdbResult? {

@@ -7,5 +7,7 @@ enum class DeviceState {
 data class Device(
     val id: String,
     val name: String,
+    val model: String,
+    val apiLevel: String,
     val state: DeviceState
 )

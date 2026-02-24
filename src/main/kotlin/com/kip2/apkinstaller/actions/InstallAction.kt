@@ -18,6 +18,9 @@ import com.kip2.apkinstaller.service.DeviceManager
 import com.kip2.apkinstaller.service.ApkInstaller
 import com.kip2.apkinstaller.service.AabInstaller
 import com.kip2.apkinstaller.ui.DeviceSelectionDialog
+import com.kip2.apkinstaller.ui.AabInstallDialog
+import com.kip2.apkinstaller.service.GradleSigningService
+import com.kip2.apkinstaller.ui.compose.AabInstallOptions
 
 class InstallAction : AnAction() {
 
@@ -57,17 +60,48 @@ class InstallAction : AnAction() {
             return
         }
 
-        val targetDevices = if (devices.size == 1) {
-            devices
-        } else {
-            val dialog = DeviceSelectionDialog(devices)
-            if (!dialog.showAndGet()) return
-            dialog.getSelectedDevices()
+        if (extension == "aab") {
+            val bundletoolPath = com.kip2.apkinstaller.util.BundletoolHelper().getBundletoolPath()
+            if (bundletoolPath == null) {
+                val result = com.intellij.openapi.ui.Messages.showOkCancelDialog(
+                    project,
+                    "Bundletool is required for AAB installation. Would you like to configure it in settings?",
+                    "Bundletool Not Found",
+                    "Go to Settings",
+                    "Cancel",
+                    com.intellij.openapi.ui.Messages.getErrorIcon()
+                )
+                if (result == com.intellij.openapi.ui.Messages.OK) {
+                    com.intellij.openapi.options.ShowSettingsUtil.getInstance().showSettingsDialog(project, "Apk/Aab Installer")
+                }
+                return
+            }
         }
 
-        if (targetDevices.isEmpty()) return
-
         val apkFile = file.toNioPath().toFile()
+        val isAab = extension == "aab"
+
+        var aabOptions: AabInstallOptions? = null
+        var finalTargetDevices = emptyList<com.kip2.apkinstaller.model.Device>()
+
+        if (isAab) {
+            val signingService = GradleSigningService(project)
+            val module = signingService.findModuleForFile(file.path)
+            val configs = if (module != null) signingService.getSigningConfigs(module) else emptyList()
+
+            val dialog = AabInstallDialog(project, devices, configs)
+            if (!dialog.showAndGet()) return
+            aabOptions = dialog.installOptions ?: return
+            finalTargetDevices = aabOptions.selectedDevices
+        } else {
+            val dialog = DeviceSelectionDialog(project, devices)
+            if (!dialog.showAndGet()) return
+            finalTargetDevices = dialog.getSelectedDevices()
+        }
+
+        if (finalTargetDevices.isEmpty()) return
+
+
 
         com.intellij.openapi.progress.ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Backgroundable(
             project,
@@ -77,10 +111,10 @@ class InstallAction : AnAction() {
         ) {
             override fun run(indicator: com.intellij.openapi.progress.ProgressIndicator) {
                 val results = try {
-                    if (apkFile.extension.equals("aab", ignoreCase = true)) {
-                        AabInstaller().install(apkFile, targetDevices, indicator)
+                    if (isAab) {
+                        AabInstaller().install(apkFile, aabOptions!!, indicator)
                     } else {
-                        ApkInstaller().install(apkFile, targetDevices, indicator)
+                        ApkInstaller().install(apkFile, finalTargetDevices, indicator)
                     }
                 } catch (ex: Exception) {
                     showError(project, "Installation failed: ${ex.message}")
