@@ -11,6 +11,12 @@ import androidx.compose.ui.unit.sp
 import com.kip2.apkinstaller.service.SigningConfig
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.*
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
+import com.intellij.openapi.application.ApplicationManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SigningForm(
@@ -21,6 +27,8 @@ fun SigningForm(
     modifier: Modifier = Modifier
 ) {
     var selectedConfig by remember { mutableStateOf<SigningConfig?>(null) }
+    var isDetecting by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     
     val storeFileState = rememberTextFieldState("")
     val storePasswordState = rememberTextFieldState("")
@@ -28,16 +36,33 @@ fun SigningForm(
     val keyPasswordState = rememberTextFieldState("")
 
     val autoDetect = {
-        project?.let { p ->
-            val service = com.kip2.apkinstaller.service.GradleSigningService(p)
-            val modules = com.intellij.openapi.module.ModuleManager.getInstance(p).modules
-            val allConfigs = modules.flatMap { service.getSigningConfigs(it) }
-            val releaseConfig = allConfigs.find { it.name.contains("release", ignoreCase = true) } ?: allConfigs.firstOrNull()
-            releaseConfig?.let { config ->
-                storeFileState.setTextAndPlaceCursorAtEnd(config.storeFile ?: "")
-                storePasswordState.setTextAndPlaceCursorAtEnd(config.storePassword ?: "")
-                keyAliasState.setTextAndPlaceCursorAtEnd(config.keyAlias ?: "")
-                keyPasswordState.setTextAndPlaceCursorAtEnd(config.keyPassword ?: "")
+        if (project != null) {
+            coroutineScope.launch {
+                isDetecting = true
+                try {
+                    val result = withContext(Dispatchers.IO) {
+                        com.kip2.apkinstaller.service.GradleSigningService(project).findBestSigningConfig()
+                    }
+
+                    if (result != null) {
+                        storeFileState.setTextAndPlaceCursorAtEnd(result.storeFile ?: "")
+                        storePasswordState.setTextAndPlaceCursorAtEnd(result.storePassword ?: "")
+                        keyAliasState.setTextAndPlaceCursorAtEnd(result.keyAlias ?: "")
+                        keyPasswordState.setTextAndPlaceCursorAtEnd(result.keyPassword ?: "")
+                    } else {
+                        NotificationGroupManager.getInstance()
+                            .getNotificationGroup("ApkInstaller.NotificationGroup")
+                            .createNotification("ApkInstaller", "No signing configuration detected in Android modules.", NotificationType.WARNING)
+                            .notify(project)
+                    }
+                } catch (e: Exception) {
+                    NotificationGroupManager.getInstance()
+                        .getNotificationGroup("ApkInstaller.NotificationGroup")
+                        .createNotification("ApkInstaller", "Error during detection: ${e.message}", NotificationType.ERROR)
+                        .notify(project)
+                } finally {
+                    isDetecting = false
+                }
             }
         }
     }
@@ -57,7 +82,11 @@ fun SigningForm(
             Text("Signing Configuration", style = JewelTheme.defaultTextStyle)
             Spacer(Modifier.weight(1f))
             if (project != null) {
-                Link("Auto Detect", onClick = { autoDetect() })
+                if (isDetecting) {
+                    Text("Detecting...", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
+                } else {
+                    Link("Auto Detect", onClick = { autoDetect() })
+                }
             }
         }
         Spacer(Modifier.height(8.dp))
