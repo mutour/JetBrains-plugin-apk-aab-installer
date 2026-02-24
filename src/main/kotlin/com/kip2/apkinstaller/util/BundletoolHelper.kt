@@ -1,10 +1,18 @@
 package com.kip2.apkinstaller.util
 
+import com.google.gson.JsonParser
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.util.io.HttpRequests
 import com.kip2.apkinstaller.settings.PluginSettings
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.URL
 
 class BundletoolHelper {
+
+    companion object {
+        private val LOG = Logger.getInstance(BundletoolHelper::class.java)
+    }
     
     fun getBundletoolPath(): String? {
         return findBundletoolPaths().firstOrNull()
@@ -48,7 +56,8 @@ class BundletoolHelper {
             return targetFile
         }
         
-        val url = URL("https://github.com/google/bundletool/releases/download/1.16.0/bundletool-all-1.16.0.jar")
+        val bundletoolUrl = getLatestBundletoolUrl()
+        val url = URL(bundletoolUrl)
         
         progressIndicator.text = "Downloading bundletool..."
         
@@ -57,6 +66,44 @@ class BundletoolHelper {
         }
         
         return targetFile
+    }
+
+    private fun getLatestBundletoolUrl(): String {
+        try {
+            val apiUrl = "https://api.github.com/repos/google/bundletool/releases/latest"
+            return HttpRequests.request(apiUrl)
+                .userAgent("ApkInstaller-Plugin")
+                .connect { request ->
+                    val response = request.readString()
+                    val json = JsonParser.parseString(response).asJsonObject
+                    val assets = json.getAsJsonArray("assets")
+                    for (asset in assets) {
+                        val name = asset.asJsonObject.get("name").asString
+                        if (name.startsWith("bundletool-all-") && name.endsWith(".jar")) {
+                            return@connect asset.asJsonObject.get("browser_download_url").asString
+                        }
+                    }
+                    throw Exception("Bundletool JAR not found in assets")
+                }
+        } catch (e: Exception) {
+            LOG.warn("Failed to get latest bundletool via API: ${e.message}")
+        }
+
+        try {
+            val latestUrl = "https://github.com/google/bundletool/releases/latest"
+            val connection = URL(latestUrl).openConnection() as HttpURLConnection
+            connection.instanceFollowRedirects = false
+            connection.connect()
+            val redirectUrl = connection.getHeaderField("Location")
+            if (redirectUrl != null) {
+                val tag = redirectUrl.substringAfterLast("/")
+                return "https://github.com/google/bundletool/releases/download/$tag/bundletool-all-$tag.jar"
+            }
+        } catch (e: Exception) {
+            LOG.warn("Failed to get latest bundletool via fallback: ${e.message}")
+        }
+
+        return "https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar"
     }
     
     private fun getCacheDir(): File {
