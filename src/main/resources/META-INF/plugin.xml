@@ -21,13 +21,13 @@
                              instance="com.kip2.apkinstaller.settings.SettingsConfigurable"
                              id="com.kip2.apkinstaller.settings.SettingsConfigurable"
                              key="settings.display.name"/>
+        <toolWindow id="ApkInstaller" factoryClass="com.kip2.apkinstaller.toolwindow.MyToolWindowFactory"
+                    icon="AllIcons.Toolwindows.ToolWindowPalette"/>
     </extensions>
 
     <actions>
         <action id="InstallApkAction" class="com.kip2.apkinstaller.actions.InstallAction">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
-        </action>
-        <action id="InstallApkFromEditor" class="com.kip2.apkinstaller.actions.InstallAction">
             <add-to-group group-id="EditorTabPopupMenu" anchor="first"/>
         </action>
     </actions>

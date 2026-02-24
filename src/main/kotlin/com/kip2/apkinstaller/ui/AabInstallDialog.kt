@@ -26,7 +26,8 @@ class AabInstallDialog(
     }
 
     override fun createCenterPanel(): JComponent {
-        return JewelComposePanel {
+        return JewelComposePanel(focusOnClickInside = true) {
+            @Suppress("DEPRECATION_ERROR")
             SwingBridgeTheme {
                 AabInstallScreen(
                     devices = devices,

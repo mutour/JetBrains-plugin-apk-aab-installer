@@ -21,7 +21,8 @@ class DeviceSelectionDialog(
     }
 
     override fun createCenterPanel(): JComponent {
-        return JewelComposePanel {
+        return JewelComposePanel(focusOnClickInside = true) {
+            @Suppress("DEPRECATION_ERROR")
             SwingBridgeTheme {
                 ApkInstallScreen(
                     devices = devices,

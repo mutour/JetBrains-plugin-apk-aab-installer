@@ -35,7 +35,7 @@ intellijPlatform {
         name = "Apk/Aab Installer"
         
         ideaVersion {
-            sinceBuild = "221"
+            sinceBuild = "241"
         }
 
         changeNotes = """
@@ -50,6 +50,19 @@ tasks {
         sourceCompatibility = "21"
         targetCompatibility = "21"
     }
+
+//    runIde {
+//        // 修复 Compose 在 IntelliJ 平台中的兼容性问题
+//        jvmArgs(
+//            "--add-exports=java.desktop/sun.awt=ALL-UNNAMED",
+//            "--add-exports=java.desktop/java.awt.peer=ALL-UNNAMED",
+//            "--add-opens=java.desktop/sun.awt=ALL-UNNAMED",
+//            "--add-opens=java.desktop/java.awt=ALL-UNNAMED",
+//            "--add-opens=java.desktop/java.awt.event=ALL-UNNAMED",
+//            "--add-opens=java.desktop/javax.swing=ALL-UNNAMED",
+//            "--add-opens=java.desktop/javax.swing.plaf.basic=ALL-UNNAMED"
+//        )
+//    }
 }
 
 kotlin {
