@@ -2,7 +2,9 @@
     <id>com.kip2.apkinstaller</id>
     <name>Apk/Aab Installer</name>
     <version>1.0.0</version>
-    <vendor url="https://www.yourcompany.com">KIP2</vendor>
+    <vendor>KIP2</vendor>
+<!--    <vendor url="https://www.yourcompany.com">KIP2</vendor>-->
+
     <description>Install APK/AAB files to Android devices directly from IDE</description>
 
     <depends>com.intellij.modules.platform</depends>

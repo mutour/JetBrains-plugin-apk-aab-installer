@@ -4,6 +4,9 @@ import com.google.gson.JsonParser
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.io.HttpRequests
 import com.kip2.apkinstaller.settings.PluginSettings
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -50,22 +53,49 @@ class BundletoolHelper {
         val cacheDir = getCacheDir()
         cacheDir.mkdirs()
         
-        val targetFile = File(cacheDir, "bundletool.jar")
-        
-        if (targetFile.exists()) {
-            return targetFile
-        }
-        
         val bundletoolUrl = getLatestBundletoolUrl()
-        val url = URL(bundletoolUrl)
+        val fileName = bundletoolUrl.substringAfterLast("/")
+        val versionedFile = File(cacheDir, fileName)
+        val symlinkFile = File(cacheDir, "bundletool.jar")
         
-        progressIndicator.text = "Downloading bundletool..."
-        
-        url.openStream().use { input ->
-            input.copyTo(targetFile.outputStream())
+        if (!versionedFile.exists()) {
+            val url = URL(bundletoolUrl)
+            progressIndicator.text = "Downloading bundletool ($fileName)..."
+            
+            try {
+                url.openStream().use { input ->
+                    input.copyTo(versionedFile.outputStream())
+                }
+            } catch (e: Exception) {
+                if (versionedFile.exists()) {
+                    versionedFile.delete()
+                }
+                throw e
+            }
         }
         
-        return targetFile
+        try {
+            val link = symlinkFile.toPath()
+            val target = Paths.get(versionedFile.name)
+            
+            if (Files.exists(link, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                Files.delete(link)
+            }
+            
+            try {
+                Files.createSymbolicLink(link, target)
+            } catch (e: UnsupportedOperationException) {
+                LOG.warn("Symlinks not supported, copying file instead: ${e.message}")
+                Files.copy(versionedFile.toPath(), link, StandardCopyOption.REPLACE_EXISTING)
+            } catch (e: Exception) {
+                LOG.warn("Failed to create symlink, copying file instead: ${e.message}")
+                Files.copy(versionedFile.toPath(), link, StandardCopyOption.REPLACE_EXISTING)
+            }
+        } catch (e: Exception) {
+            LOG.error("Failed to update bundletool.jar link/copy", e)
+        }
+        
+        return symlinkFile
     }
 
     private fun getLatestBundletoolUrl(): String {
