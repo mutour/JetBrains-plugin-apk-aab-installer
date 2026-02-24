@@ -49,10 +49,7 @@ import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.component.*
 import java.awt.datatransfer.DataFlavor
 import java.io.File
-import java.awt.BorderLayout
-import javax.swing.JPanel
-import javax.swing.TransferHandler
-import javax.swing.TransferHandler.TransferSupport
+import java.awt.dnd.*
 
 class MyToolWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
@@ -76,38 +73,48 @@ class MyToolWindowFactory : ToolWindowFactory {
             MyToolWindowContent(project, isDragging, onFileSelect)
         }
 
-        // Wrap ComposePanel in a standard JPanel to support TransferHandler
-        val mainPanel = JPanel(BorderLayout())
-        mainPanel.add(composePanel, BorderLayout.CENTER)
-
-        // Use TransferHandler instead of DropTarget for reliable DnD
-        mainPanel.transferHandler = object : TransferHandler() {
-            override fun canImport(support: TransferSupport): Boolean {
-                val canImport = support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
-                isDragging.value = canImport
-                return canImport
+        // Use DropTarget for drag and drop (more reliable than TransferHandler in some environments)
+        val target = object : DropTargetAdapter() {
+            override fun dragEnter(dtde: DropTargetDragEvent) {
+                if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                    dtde.acceptDrag(DnDConstants.ACTION_COPY)
+                    isDragging.value = true
+                } else {
+                    dtde.rejectDrag()
+                    isDragging.value = false
+                }
             }
 
-            override fun importData(support: TransferSupport): Boolean {
+            override fun dragExit(dte: DropTargetEvent) {
                 isDragging.value = false
-                if (!canImport(support)) return false
+            }
 
-                return try {
-                    val files = support.transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<*>
-                    val file = files.firstOrNull() as? File
-                    if (file != null) {
-                        handleFileInstall(project, file)
-                        true
+            override fun drop(dtde: DropTargetDropEvent) {
+                isDragging.value = false
+                try {
+                    if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                        dtde.acceptDrop(DnDConstants.ACTION_COPY)
+                        val transferable = dtde.transferable
+                        val fileList = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<*>
+                        val file = fileList.firstOrNull() as? File
+                        if (file != null) {
+                            handleFileInstall(project, file)
+                            dtde.dropComplete(true)
+                        } else {
+                            dtde.dropComplete(false)
+                        }
                     } else {
-                        false
+                        dtde.rejectDrop()
                     }
                 } catch (e: Exception) {
-                    false
+                    dtde.dropComplete(false)
                 }
             }
         }
+        
+        DropTarget(composePanel, target)
 
-        val content = ContentFactory.getInstance().createContent(mainPanel, "Installer & Settings", false)
+        val content = ContentFactory.getInstance().createContent(composePanel, "Installer & Settings", false)
         toolWindow.contentManager.addContent(content)
     }
 }
