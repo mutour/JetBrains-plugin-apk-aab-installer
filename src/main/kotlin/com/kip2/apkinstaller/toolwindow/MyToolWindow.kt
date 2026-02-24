@@ -13,7 +13,6 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.onExternalDrag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,6 +26,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.ui.content.ContentFactory
 import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.service.AabInstaller
 import com.kip2.apkinstaller.service.ApkInstaller
@@ -40,10 +40,12 @@ import com.kip2.apkinstaller.util.AdbLocator
 import com.kip2.apkinstaller.util.BundletoolHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.jewel.bridge.addComposeTab
+import org.jetbrains.jewel.bridge.JewelComposePanel
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.component.*
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.*
 import java.io.File
 import java.net.URI
 
@@ -51,23 +53,58 @@ class MyToolWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        toolWindow.addComposeTab("Installer & Settings", focusOnClickInside = true) {
-            MyToolWindowContent(project)
+        val isDragging = mutableStateOf(false)
+        val panel = JewelComposePanel(focusOnClickInside = true) {
+            MyToolWindowContent(project, isDragging)
         }
+
+        panel.dropTarget = object : DropTarget() {
+            override fun dragEnter(dtde: DropTargetDragEvent) {
+                isDragging.value = true
+                dtde.acceptDrag(DnDConstants.ACTION_COPY)
+            }
+
+            override fun dragExit(dte: DropTargetEvent) {
+                isDragging.value = false
+            }
+
+            override fun drop(dtde: DropTargetDropEvent) {
+                isDragging.value = false
+                try {
+                    dtde.acceptDrop(DnDConstants.ACTION_COPY)
+                    val transferable = dtde.transferable
+                    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                        val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<*>
+                        val file = files.firstOrNull() as? File
+                        if (file != null) {
+                            handleFileInstall(project, file)
+                        }
+                        dtde.dropComplete(true)
+                    } else {
+                        dtde.dropComplete(false)
+                    }
+                } catch (e: Exception) {
+                    dtde.dropComplete(false)
+                }
+            }
+        }
+
+        val content = ContentFactory.getInstance().createContent(panel, "Installer & Settings", false)
+        toolWindow.contentManager.addContent(content)
     }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun MyToolWindowContent(project: Project) {
+private fun MyToolWindowContent(project: Project, isDraggingState: MutableState<Boolean>) {
     val settings = PluginSettings.getInstance()
     val adbPathState = rememberTextFieldState(settings.adbPath)
     val bundletoolPathState = rememberTextFieldState(settings.bundletoolPath)
-    
+
     var detectedAdbPaths by remember { mutableStateOf(emptyList<String>()) }
     var detectedBundletoolPaths by remember { mutableStateOf(emptyList<String>()) }
     var isEnvLoading by remember { mutableStateOf(true) }
-    
+
     val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) {
@@ -81,7 +118,7 @@ private fun MyToolWindowContent(project: Project) {
     LaunchedEffect(adbPathState.text) {
         settings.adbPath = adbPathState.text.toString()
     }
-    
+
     LaunchedEffect(bundletoolPathState.text) {
         settings.bundletoolPath = bundletoolPathState.text.toString()
     }
@@ -94,7 +131,7 @@ private fun MyToolWindowContent(project: Project) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Environment Settings", 
+            text = "Environment Settings",
             style = JewelTheme.defaultTextStyle.copy(fontSize = 16.sp)
         )
 
@@ -105,7 +142,7 @@ private fun MyToolWindowContent(project: Project) {
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Path to adb executable") }
             )
-            
+
             if (detectedAdbPaths.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Detected:", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
@@ -144,7 +181,7 @@ private fun MyToolWindowContent(project: Project) {
                     Text("Download")
                 }
             }
-            
+
             if (detectedBundletoolPaths.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Detected:", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
@@ -158,11 +195,11 @@ private fun MyToolWindowContent(project: Project) {
         Divider(Orientation.Horizontal)
 
         Text(
-            text = "Install APK / AAB", 
+            text = "Install APK / AAB",
             style = JewelTheme.defaultTextStyle.copy(fontSize = 16.sp)
         )
 
-        var isDragging by remember { mutableStateOf(false) }
+        val isDragging by isDraggingState
 
         Box(
             modifier = Modifier
@@ -173,22 +210,6 @@ private fun MyToolWindowContent(project: Project) {
                     width = 2.dp,
                     color = if (isDragging) JewelTheme.globalColors.borders.focused else JewelTheme.globalColors.borders.normal,
                     shape = RoundedCornerShape(8.dp)
-                )
-                .onExternalDrag(
-                    onDragStart = { isDragging = true; true },
-                    onDragExit = { isDragging = false },
-                    onDrop = { state ->
-                        isDragging = false
-                        val dragData = state.dragData
-                        if (dragData is androidx.compose.ui.DragData.FilesList) {
-                            val files = dragData.readFiles()
-                            if (files.isNotEmpty()) {
-                                val path = files[0]
-                                val file = if (path.startsWith("file:")) File(URI.create(path)) else File(path)
-                                handleFileInstall(project, file)
-                            }
-                        }
-                    }
                 ),
             contentAlignment = Alignment.Center
         ) {
@@ -220,7 +241,7 @@ private fun handleFileInstall(project: Project, file: File) {
     }
 
     val virtualFile = VfsUtil.findFileByIoFile(file, true) ?: return
-    
+
     val deviceManager = DeviceManager()
     val devices = try {
         deviceManager.getDevices()

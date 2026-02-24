@@ -11,8 +11,8 @@ import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.component.*
 
 data class AabInstallOptions(
-    val selectedDevices: List<Device>,
-    val signingConfig: SigningConfig,
+    val selectedDevices: List<com.kip2.apkinstaller.model.Device>,
+    val signingConfig: com.kip2.apkinstaller.service.SigningConfig,
     val isUniversalMode: Boolean,
     val localTesting: Boolean,
     val updateExisting: Boolean
@@ -20,6 +20,7 @@ data class AabInstallOptions(
 
 @Composable
 fun AabInstallScreen(
+    project: com.intellij.openapi.project.Project?,
     devices: List<Device>,
     detectedConfigs: List<SigningConfig>,
     onInstall: (AabInstallOptions) -> Unit,
@@ -31,8 +32,8 @@ fun AabInstallScreen(
     var localTesting by remember { mutableStateOf(false) }
     var updateExisting by remember { mutableStateOf(true) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Row(modifier = Modifier.weight(1f)) {
+    Column(modifier = Modifier.width(700.dp).padding(16.dp)) {
+        Row(modifier = Modifier.heightIn(max = 400.dp)) {
             Column(modifier = Modifier.weight(0.4f)) {
                 Text("Select Devices", style = JewelTheme.defaultTextStyle)
                 Spacer(Modifier.height(8.dp))
@@ -49,6 +50,7 @@ fun AabInstallScreen(
 
             Column(modifier = Modifier.weight(0.6f)) {
                 SigningForm(
+                    project = project,
                     configs = detectedConfigs,
                     onConfigSelected = { signingConfig = it },
                     onManualChange = { signingConfig = it },

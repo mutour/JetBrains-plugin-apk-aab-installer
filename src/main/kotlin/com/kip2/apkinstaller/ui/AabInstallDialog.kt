@@ -9,9 +9,10 @@ import com.kip2.apkinstaller.ui.compose.AabInstallScreen
 import org.jetbrains.jewel.bridge.JewelComposePanel
 import org.jetbrains.jewel.bridge.theme.SwingBridgeTheme
 import javax.swing.JComponent
+import java.awt.Dimension
 
 class AabInstallDialog(
-    project: Project,
+    private val project: Project,
     private val devices: List<Device>,
     private val detectedConfigs: List<SigningConfig>
 ) : DialogWrapper(project) {
@@ -26,10 +27,11 @@ class AabInstallDialog(
     }
 
     override fun createCenterPanel(): JComponent {
-        return JewelComposePanel(focusOnClickInside = true) {
+        val panel = JewelComposePanel(focusOnClickInside = true) {
             @Suppress("DEPRECATION_ERROR")
             SwingBridgeTheme {
                 AabInstallScreen(
+                    project = project,
                     devices = devices,
                     detectedConfigs = detectedConfigs,
                     onInstall = {
@@ -42,6 +44,8 @@ class AabInstallDialog(
                 )
             }
         }
+        panel.preferredSize = Dimension(750, 550)
+        return panel
     }
 
     override fun createActions(): Array<javax.swing.Action> = emptyArray()
