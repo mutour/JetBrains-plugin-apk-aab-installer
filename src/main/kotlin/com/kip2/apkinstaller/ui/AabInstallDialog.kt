@@ -2,6 +2,7 @@ package com.kip2.apkinstaller.ui
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.kip2.apkinstaller.InstallerBundle
 import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.service.SigningConfig
 import com.kip2.apkinstaller.ui.compose.AabInstallOptions
@@ -21,8 +22,8 @@ class AabInstallDialog(
         private set
 
     init {
-        title = "Install AAB to Device(s)"
-        setOKButtonText("Install")
+        title = InstallerBundle.message("dialog.install.aab.title")
+        setOKButtonText(InstallerBundle.message("dialog.install.button"))
         init()
     }
 
