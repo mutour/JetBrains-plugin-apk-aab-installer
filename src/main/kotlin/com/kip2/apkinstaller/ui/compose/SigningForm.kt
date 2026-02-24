@@ -16,6 +16,7 @@ import org.jetbrains.jewel.ui.component.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+import com.kip2.apkinstaller.InstallerBundle
 
 
 @Composable
@@ -78,11 +79,11 @@ fun SigningForm(
 
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Signing Configuration", style = JewelTheme.defaultTextStyle)
+            Text(InstallerBundle.message("signing.form.title"), style = JewelTheme.defaultTextStyle)
             Spacer(Modifier.weight(1f))
             if (project != null) {
                 DefaultButton(onClick = onDetectConfigs) {
-                    Text("Detect Gradle Configs")
+                    Text(InstallerBundle.message("signing.form.detect.button"))
                 }
             }
         }
@@ -117,7 +118,7 @@ fun SigningForm(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = selectedConfig?.let { "${it.moduleName}: ${it.name}" } ?: "Select from existing configs...",
+                        text = selectedConfig?.let { "${it.moduleName}: ${it.name}" } ?: InstallerBundle.message("signing.form.select.placeholder"),
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
@@ -125,7 +126,7 @@ fun SigningForm(
             Spacer(Modifier.height(12.dp))
         }
 
-        Text("Keystore Path", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
+        Text(InstallerBundle.message("signing.form.keystore.path"), style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
         Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextField(
@@ -136,7 +137,7 @@ fun SigningForm(
                 Spacer(Modifier.width(8.dp))
                 DefaultButton(onClick = {
                     val descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor()
-                    descriptor.title = "Select Keystore File"
+                    descriptor.title = InstallerBundle.message("signing.form.select.keystore.title")
                     FileChooser.chooseFile(descriptor, project, null) { file ->
                         storeFileState.setTextAndPlaceCursorAtEnd(file.path)
                     }
@@ -149,7 +150,7 @@ fun SigningForm(
         
         Row(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Keystore Password", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
+                Text(InstallerBundle.message("signing.form.keystore.password"), style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
                 Spacer(Modifier.height(4.dp))
                 TextField(
                     state = storePasswordState,
@@ -158,7 +159,7 @@ fun SigningForm(
             }
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Key Password", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
+                Text(InstallerBundle.message("signing.form.key.password"), style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
                 Spacer(Modifier.height(4.dp))
                 TextField(
                     state = keyPasswordState,
@@ -167,7 +168,7 @@ fun SigningForm(
             }
         }
         Spacer(Modifier.height(8.dp))
-        Text("Key Alias", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
+        Text(InstallerBundle.message("signing.form.key.alias"), style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
         Spacer(Modifier.height(4.dp))
         TextField(
             state = keyAliasState,

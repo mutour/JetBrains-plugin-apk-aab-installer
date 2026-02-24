@@ -4,6 +4,7 @@ import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.util.AdbLocator
 import com.kip2.apkinstaller.util.BundletoolHelper
 import com.intellij.openapi.progress.ProgressIndicator
+import com.kip2.apkinstaller.InstallerBundle
 import com.kip2.apkinstaller.ui.compose.AabInstallOptions
 import java.io.File
 
@@ -29,12 +30,12 @@ class AabInstaller(
         devices.forEachIndexed { index, device ->
             if (indicator.isCanceled) return results
 
-            indicator.text = "Building APKS for ${device.name}..."
+            indicator.text = InstallerBundle.message("status.building.apks", device.name)
             indicator.fraction = index.toDouble() / devices.size * 0.5
 
             val apksFile = buildApks(bundletoolResult, aabFile, device, options)
 
-            indicator.text = "Installing to ${device.name}..."
+            indicator.text = InstallerBundle.message("status.installing.to", device.name)
             indicator.fraction = 0.5 + index.toDouble() / devices.size * 0.5
 
             // Ensure file is deleted even if installation fails

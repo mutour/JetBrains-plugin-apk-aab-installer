@@ -12,7 +12,7 @@ import com.kip2.apkinstaller.model.DeviceState
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.component.*
-
+import com.kip2.apkinstaller.InstallerBundle
 @Composable
 fun DeviceSelector(
     devices: List<Device>,
@@ -34,7 +34,7 @@ fun DeviceSelector(
                     onSelectionChanged(devices.filter { it.id in selectedIds })
                 }
             )
-            Text("Select All Devices", modifier = Modifier.padding(start = 8.dp))
+            Text(InstallerBundle.message("device.selector.select.all"), modifier = Modifier.padding(start = 8.dp))
         }
 
         Divider(Orientation.Horizontal)
@@ -42,7 +42,7 @@ fun DeviceSelector(
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (devices.isEmpty()) {
                 Text(
-                    "No devices connected",
+                    InstallerBundle.message("device.no.devices"),
                     modifier = Modifier.align(Alignment.Center),
                     style = JewelTheme.defaultTextStyle
                 )

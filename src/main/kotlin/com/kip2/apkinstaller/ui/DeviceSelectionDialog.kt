@@ -4,6 +4,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.ui.compose.ApkInstallScreen
+import com.kip2.apkinstaller.InstallerBundle
 import org.jetbrains.jewel.bridge.JewelComposePanel
 import org.jetbrains.jewel.bridge.theme.SwingBridgeTheme
 import javax.swing.JComponent
@@ -18,7 +19,7 @@ class DeviceSelectionDialog(
     private var selectedDevices: List<Device> = emptyList()
 
     init {
-        title = "Select Target Devices"
+        title = InstallerBundle.message("dialog.select.devices.title")
         init()
     }
 

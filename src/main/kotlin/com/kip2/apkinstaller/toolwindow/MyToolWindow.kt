@@ -30,6 +30,7 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
+import com.kip2.apkinstaller.InstallerBundle
 import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.service.AabInstaller
 import com.kip2.apkinstaller.service.ApkInstaller
@@ -47,16 +48,14 @@ import org.jetbrains.jewel.bridge.JewelComposePanel
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.component.*
-import java.awt.datatransfer.DataFlavor
+
 import java.io.File
-import java.awt.dnd.*
+
 
 class MyToolWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val isDragging = mutableStateOf(false)
-
         val onFileSelect = {
             val descriptor = FileChooserDescriptorFactory.createSingleFileNoJarsDescriptor()
                 .withTitle("Select APK or AAB")
@@ -70,51 +69,10 @@ class MyToolWindowFactory : ToolWindowFactory {
         }
 
         val composePanel = JewelComposePanel(focusOnClickInside = true) {
-            MyToolWindowContent(project, isDragging, onFileSelect)
+            MyToolWindowContent(project, onFileSelect)
         }
 
-        // Use DropTarget for drag and drop (more reliable than TransferHandler in some environments)
-        val target = object : DropTargetAdapter() {
-            override fun dragEnter(dtde: DropTargetDragEvent) {
-                if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                    dtde.acceptDrag(DnDConstants.ACTION_COPY)
-                    isDragging.value = true
-                } else {
-                    dtde.rejectDrag()
-                    isDragging.value = false
-                }
-            }
-
-            override fun dragExit(dte: DropTargetEvent) {
-                isDragging.value = false
-            }
-
-            override fun drop(dtde: DropTargetDropEvent) {
-                isDragging.value = false
-                try {
-                    if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                        dtde.acceptDrop(DnDConstants.ACTION_COPY)
-                        val transferable = dtde.transferable
-                        val fileList = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<*>
-                        val file = fileList.firstOrNull() as? File
-                        if (file != null) {
-                            handleFileInstall(project, file)
-                            dtde.dropComplete(true)
-                        } else {
-                            dtde.dropComplete(false)
-                        }
-                    } else {
-                        dtde.rejectDrop()
-                    }
-                } catch (e: Exception) {
-                    dtde.dropComplete(false)
-                }
-            }
-        }
-        
-        DropTarget(composePanel, target)
-
-        val content = ContentFactory.getInstance().createContent(composePanel, "Installer & Settings", false)
+        val content = ContentFactory.getInstance().createContent(composePanel, InstallerBundle.message("settings.display.name"), false)
         toolWindow.contentManager.addContent(content)
     }
 }
@@ -123,7 +81,6 @@ class MyToolWindowFactory : ToolWindowFactory {
 @Composable
 private fun MyToolWindowContent(
     project: Project, 
-    isDraggingState: MutableState<Boolean>,
     onFileSelect: () -> Unit
 ) {
     val settings = PluginSettings.getInstance()
@@ -160,21 +117,21 @@ private fun MyToolWindowContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Environment Settings",
+            text = InstallerBundle.message("settings.environment.title"),
             style = JewelTheme.defaultTextStyle.copy(fontSize = 16.sp)
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("ADB Path", style = JewelTheme.defaultTextStyle)
+            Text(InstallerBundle.message("settings.adb.path.label"), style = JewelTheme.defaultTextStyle)
             TextField(
                 state = adbPathState,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Path to adb executable") }
+                placeholder = { Text(InstallerBundle.message("settings.adb.path.placeholder")) }
             )
 
             if (detectedAdbPaths.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Detected:", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
+                    Text(InstallerBundle.message("settings.detected.label"), style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
                     detectedAdbPaths.take(3).forEach { path ->
                         Link(path, onClick = { adbPathState.setTextAndPlaceCursorAtEnd(path) })
                     }
@@ -183,15 +140,15 @@ private fun MyToolWindowContent(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Bundletool Path", style = JewelTheme.defaultTextStyle)
+            Text(InstallerBundle.message("settings.bundletool.path.label"), style = JewelTheme.defaultTextStyle)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextField(
                     state = bundletoolPathState,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Path to bundletool.jar") }
+                    placeholder = { Text(InstallerBundle.message("settings.bundletool.path.placeholder")) }
                 )
                 OutlinedButton(onClick = {
-                    ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Downloading bundletool", true) {
+                    ProgressManager.getInstance().run(object : Task.Backgroundable(project, InstallerBundle.message("settings.downloading.bundletool"), true) {
                         override fun run(indicator: ProgressIndicator) {
                             try {
                                 val file = BundletoolHelper().downloadBundletool(indicator)
@@ -201,19 +158,19 @@ private fun MyToolWindowContent(
                             } catch (e: Exception) {
                                 NotificationGroupManager.getInstance()
                                     .getNotificationGroup("ApkInstaller.NotificationGroup")
-                                    .createNotification("Download Failed", e.message ?: "Unknown error", NotificationType.ERROR)
+                                    .createNotification(InstallerBundle.message("settings.download.failed"), e.message ?: "Unknown error", NotificationType.ERROR)
                                     .notify(project)
                             }
                         }
                     })
                 }) {
-                    Text("Download")
+                    Text(InstallerBundle.message("settings.download.button"))
                 }
             }
 
             if (detectedBundletoolPaths.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Detected:", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
+                    Text(InstallerBundle.message("settings.detected.label"), style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
                     detectedBundletoolPaths.take(3).forEach { path ->
                         Link(path, onClick = { bundletoolPathState.setTextAndPlaceCursorAtEnd(path) })
                     }
@@ -224,11 +181,9 @@ private fun MyToolWindowContent(
         Divider(Orientation.Horizontal)
 
         Text(
-            text = "Install APK / AAB",
+            text = InstallerBundle.message("toolwindow.install.title"),
             style = JewelTheme.defaultTextStyle.copy(fontSize = 16.sp)
         )
-
-        val isDragging by isDraggingState
 
         Box(
             modifier = Modifier
@@ -237,7 +192,7 @@ private fun MyToolWindowContent(
                 .clip(RoundedCornerShape(8.dp))
                 .border(
                     width = 2.dp,
-                    color = if (isDragging) JewelTheme.globalColors.borders.focused else JewelTheme.globalColors.borders.normal,
+                    color = JewelTheme.globalColors.borders.normal,
                     shape = RoundedCornerShape(8.dp)
                 )
                 .clickable(onClick = onFileSelect),
@@ -245,13 +200,13 @@ private fun MyToolWindowContent(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = if (isDragging) "Drop to Install" else "Drag APK or AAB here to install\nOr click to select",
+                    text = InstallerBundle.message("toolwindow.select.file.text"),
                     style = JewelTheme.defaultTextStyle.copy(fontSize = 14.sp),
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Supports .apk and .aab files",
+                    text = InstallerBundle.message("toolwindow.supports.text"),
                     style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp, color = Color.Gray)
                 )
             }
@@ -265,10 +220,11 @@ private fun handleFileInstall(project: Project, file: File) {
     if (extension !in listOf("apk", "aab")) {
         NotificationGroupManager.getInstance()
             .getNotificationGroup("ApkInstaller.NotificationGroup")
-            .createNotification("ApkInstaller", "Unsupported file type: $extension", NotificationType.ERROR)
+            .createNotification(InstallerBundle.message("apk.installer.info"), InstallerBundle.message("status.unsupported.file", extension), NotificationType.ERROR)
             .notify(project)
         return
     }
+
 
     val virtualFile = VfsUtil.findFileByIoFile(file, true) ?: return
 
@@ -276,12 +232,11 @@ private fun handleFileInstall(project: Project, file: File) {
     val devices = try {
         deviceManager.getDevices()
     } catch (ex: Exception) {
-        showError(project, "Failed to get devices: ${ex.message}")
+        showError(project, InstallerBundle.message("status.install.failed", ex.message ?: "Unknown error"))
         return
     }
-
     if (devices.isEmpty()) {
-        showError(project, "No devices connected")
+        showError(project, InstallerBundle.message("status.no.devices"))
         return
     }
 
@@ -290,7 +245,7 @@ private fun handleFileInstall(project: Project, file: File) {
         if (bundletoolPath == null) {
             NotificationGroupManager.getInstance()
                 .getNotificationGroup("ApkInstaller.NotificationGroup")
-                .createNotification("Bundletool Required", "Please configure or download bundletool in settings above.", NotificationType.ERROR)
+                .createNotification(InstallerBundle.message("status.bundletool.required.title"), InstallerBundle.message("status.bundletool.required.msg"), NotificationType.ERROR)
                 .notify(project)
             return
         }
@@ -316,7 +271,7 @@ private fun handleFileInstall(project: Project, file: File) {
 
     if (finalTargetDevices.isEmpty()) return
 
-    ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Installing ${file.name}...", true) {
+    ProgressManager.getInstance().run(object : Task.Backgroundable(project, InstallerBundle.message("status.installing"), true) {
         override fun run(indicator: ProgressIndicator) {
             val results = try {
                 if (extension == "aab") {
@@ -325,20 +280,18 @@ private fun handleFileInstall(project: Project, file: File) {
                     ApkInstaller().install(file, finalTargetDevices, indicator)
                 }
             } catch (ex: Exception) {
-                showError(project, "Installation failed: ${ex.message}")
+                showError(project, InstallerBundle.message("status.install.failed", ex.message ?: "Unknown error"))
                 return
             }
 
             if (indicator.isCanceled) return
-
             val successCount = results.count { it.success }
             val failedResults = results.filter { !it.success }
-
             if (failedResults.isEmpty()) {
-                showInfo(project, "Successfully installed to $successCount device(s).")
+                showInfo(project, InstallerBundle.message("status.success", successCount))
             } else {
                 val errorMsg = failedResults.joinToString("\n") { "${it.device.name}: ${it.output.trim()}" }
-                showError(project, "Installed to $successCount device(s). Failed on ${failedResults.size} device(s):\n$errorMsg")
+                showError(project, InstallerBundle.message("status.partial.failure", successCount, failedResults.size, errorMsg))
             }
         }
     })
@@ -347,13 +300,13 @@ private fun handleFileInstall(project: Project, file: File) {
 private fun showError(project: Project, message: String) {
     NotificationGroupManager.getInstance()
         .getNotificationGroup("ApkInstaller.NotificationGroup")
-        .createNotification("ApkInstaller Error", message, NotificationType.ERROR)
+        .createNotification(InstallerBundle.message("apk.installer.error"), message, NotificationType.ERROR)
         .notify(project)
 }
 
 private fun showInfo(project: Project, message: String) {
     NotificationGroupManager.getInstance()
         .getNotificationGroup("ApkInstaller.NotificationGroup")
-        .createNotification("ApkInstaller", message, NotificationType.INFORMATION)
+        .createNotification(InstallerBundle.message("apk.installer.info"), message, NotificationType.INFORMATION)
         .notify(project)
 }

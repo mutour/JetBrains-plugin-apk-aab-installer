@@ -1,6 +1,6 @@
 <idea-plugin>
     <id>com.kip2.apkinstaller</id>
-    <name>Apk/Aab Installer</name>
+    <name key="settings.display.name">Apk/Aab Installer</name>
     <version>1.0.0</version>
     <vendor>KIP2</vendor>
 <!--    <vendor url="https://www.yourcompany.com">KIP2</vendor>-->

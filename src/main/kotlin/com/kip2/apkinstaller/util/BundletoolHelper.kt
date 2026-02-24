@@ -4,6 +4,7 @@ import com.google.gson.JsonParser
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.io.HttpRequests
 import com.kip2.apkinstaller.settings.PluginSettings
+import com.kip2.apkinstaller.InstallerBundle
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
@@ -60,7 +61,7 @@ class BundletoolHelper {
         
         if (!versionedFile.exists()) {
             val url = URL(bundletoolUrl)
-            progressIndicator.text = "Downloading bundletool ($fileName)..."
+            progressIndicator.text = InstallerBundle.message("settings.downloading.bundletool") + " ($fileName)..."
             
             try {
                 url.openStream().use { input ->

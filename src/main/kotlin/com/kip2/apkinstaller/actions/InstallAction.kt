@@ -40,7 +40,7 @@ class InstallAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val file = getVirtualFile(e) ?: run {
-            showError(project, "No file selected")
+            showError(project, InstallerBundle.message("status.no.file.selected"))
             return
         }
 
@@ -48,7 +48,7 @@ class InstallAction : AnAction() {
         if (extension !in listOf("apk", "aab")) return
 
         // Use Task.Modal to fetch devices to prevent EDT freeze
-        com.intellij.openapi.progress.ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Modal(project, "Scanning for Devices...", true) {
+        com.intellij.openapi.progress.ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Modal(project, InstallerBundle.message("status.scanning.devices"), true) {
             override fun run(indicator: com.intellij.openapi.progress.ProgressIndicator) {
                 indicator.isIndeterminate = true
                 val deviceManager = DeviceManager()
@@ -56,14 +56,14 @@ class InstallAction : AnAction() {
                     deviceManager.getDevices()
                 } catch (ex: Exception) {
                     com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
-                        showError(project, "Failed to get devices: ${ex.message}")
+                        showError(project, InstallerBundle.message("status.install.failed", ex.message ?: "Unknown error"))
                     }
                     return
                 }
 
                 if (devices.isEmpty()) {
                     com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
-                        showError(project, "No devices connected")
+                        showError(project, InstallerBundle.message("status.no.devices"))
                     }
                     return
                 }
@@ -81,14 +81,14 @@ class InstallAction : AnAction() {
             if (bundletoolPath == null) {
                 val result = com.intellij.openapi.ui.Messages.showOkCancelDialog(
                     project,
-                    "Bundletool is required for AAB installation. Would you like to configure it in settings?",
-                    "Bundletool Not Found",
-                    "Go to Settings",
-                    "Cancel",
+                    InstallerBundle.message("status.bundletool.not.found.msg"),
+                    InstallerBundle.message("status.bundletool.not.found.title"),
+                    InstallerBundle.message("status.go.to.settings"),
+                    InstallerBundle.message("dialog.cancel.button"),
                     com.intellij.openapi.ui.Messages.getErrorIcon()
                 )
                 if (result == com.intellij.openapi.ui.Messages.OK) {
-                    com.intellij.openapi.options.ShowSettingsUtil.getInstance().showSettingsDialog(project, "Apk/Aab Installer")
+                    com.intellij.openapi.options.ShowSettingsUtil.getInstance().showSettingsDialog(project, InstallerBundle.message("settings.display.name"))
                 }
                 return
             }
@@ -124,7 +124,7 @@ class InstallAction : AnAction() {
 
         com.intellij.openapi.progress.ProgressManager.getInstance().run(object : com.intellij.openapi.progress.Task.Backgroundable(
             project,
-            "Installing package...",
+            InstallerBundle.message("status.installing"),
             true,
             com.intellij.openapi.progress.PerformInBackgroundOption.DEAF
         ) {
@@ -136,7 +136,7 @@ class InstallAction : AnAction() {
                         ApkInstaller().install(apkFile, finalTargetDevices, indicator)
                     }
                 } catch (ex: Exception) {
-                    showError(project, "Installation failed: ${ex.message}")
+                    showError(project, InstallerBundle.message("status.install.failed", ex.message ?: "Unknown error"))
                     return
                 }
 
@@ -146,10 +146,10 @@ class InstallAction : AnAction() {
                 val failedResults = results.filter { !it.success }
 
                 if (failedResults.isEmpty()) {
-                    showInfo(project, "Successfully installed to $successCount device(s).")
+                    showInfo(project, InstallerBundle.message("status.success", successCount))
                 } else {
                     val errorMsg = failedResults.joinToString("\n") { "${it.device.name}: ${it.output.trim()}" }
-                    showError(project, "Installed to $successCount device(s). Failed on ${failedResults.size} device(s):\n$errorMsg")
+                    showError(project, InstallerBundle.message("status.partial.failure", successCount, failedResults.size, errorMsg))
                 }
             }
         })
@@ -186,14 +186,14 @@ class InstallAction : AnAction() {
     private fun showError(project: Project, message: String) {
         NotificationGroupManager.getInstance()
             .getNotificationGroup("ApkInstaller.NotificationGroup")
-            .createNotification("ApkInstaller Error", message, NotificationType.ERROR)
+            .createNotification(InstallerBundle.message("apk.installer.error"), message, NotificationType.ERROR)
             .notify(project)
     }
 
     private fun showInfo(project: Project, message: String) {
         NotificationGroupManager.getInstance()
             .getNotificationGroup("ApkInstaller.NotificationGroup")
-            .createNotification("ApkInstaller", message, NotificationType.INFORMATION)
+            .createNotification(InstallerBundle.message("apk.installer.info"), message, NotificationType.INFORMATION)
             .notify(project)
     }
 }

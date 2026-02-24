@@ -9,6 +9,7 @@ import com.kip2.apkinstaller.service.SigningConfig
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.component.*
+import com.kip2.apkinstaller.InstallerBundle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,7 +45,7 @@ fun AabInstallScreen(
     Column(modifier = Modifier.width(700.dp).padding(16.dp)) {
         Row(modifier = Modifier.heightIn(max = 400.dp)) {
             Column(modifier = Modifier.weight(0.4f)) {
-                Text("Select Devices", style = JewelTheme.defaultTextStyle)
+                Text(InstallerBundle.message("aab.install.select.devices"), style = JewelTheme.defaultTextStyle)
                 Spacer(Modifier.height(8.dp))
                 DeviceSelector(
                     devices = devices,
@@ -108,21 +109,21 @@ fun AabInstallScreen(
                 Divider(Orientation.Horizontal)
                 Spacer(Modifier.height(16.dp))
 
-                Text("Installation Parameters", style = JewelTheme.defaultTextStyle)
+                Text(InstallerBundle.message("aab.install.parameters"), style = JewelTheme.defaultTextStyle)
                 Spacer(Modifier.height(8.dp))
 
                 CheckboxRow(
-                    text = "Universal Mode (--mode=universal)",
+                    text = InstallerBundle.message("aab.install.mode.universal"),
                     checked = isUniversalMode,
                     onCheckedChange = { isUniversalMode = it }
                 )
                 CheckboxRow(
-                    text = "Local Testing (--local-testing)",
+                    text = InstallerBundle.message("aab.install.local.testing"),
                     checked = localTesting,
                     onCheckedChange = { localTesting = it }
                 )
                 CheckboxRow(
-                    text = "Update Existing (--update)",
+                    text = InstallerBundle.message("aab.install.update"),
                     checked = updateExisting,
                     onCheckedChange = { updateExisting = it }
                 )
@@ -138,7 +139,7 @@ fun AabInstallScreen(
             horizontalArrangement = Arrangement.End
         ) {
             DefaultButton(onClick = onCancel) {
-                Text("Cancel")
+                Text(InstallerBundle.message("dialog.cancel.button"))
             }
             Spacer(Modifier.width(12.dp))
             OutlinedButton(
@@ -155,7 +156,7 @@ fun AabInstallScreen(
                 },
                 enabled = selectedDevices.isNotEmpty()
             ) {
-                Text("Install AAB")
+                Text(InstallerBundle.message("aab.install.button"))
             }
         }
     }
