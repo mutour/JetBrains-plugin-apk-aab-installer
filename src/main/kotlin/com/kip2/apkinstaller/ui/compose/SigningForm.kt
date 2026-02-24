@@ -1,5 +1,7 @@
 package com.kip2.apkinstaller.ui.compose
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -11,12 +13,7 @@ import androidx.compose.ui.unit.sp
 import com.kip2.apkinstaller.service.SigningConfig
 import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.component.*
-import com.intellij.notification.NotificationGroupManager
-import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun SigningForm(
@@ -27,45 +24,11 @@ fun SigningForm(
     modifier: Modifier = Modifier
 ) {
     var selectedConfig by remember { mutableStateOf<SigningConfig?>(null) }
-    var isDetecting by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
     
     val storeFileState = rememberTextFieldState("")
     val storePasswordState = rememberTextFieldState("")
     val keyAliasState = rememberTextFieldState("")
     val keyPasswordState = rememberTextFieldState("")
-
-    val autoDetect = {
-        if (project != null) {
-            coroutineScope.launch {
-                isDetecting = true
-                try {
-                    val result = withContext(Dispatchers.IO) {
-                        com.kip2.apkinstaller.service.GradleSigningService(project).findBestSigningConfig()
-                    }
-
-                    if (result != null) {
-                        storeFileState.setTextAndPlaceCursorAtEnd(result.storeFile ?: "")
-                        storePasswordState.setTextAndPlaceCursorAtEnd(result.storePassword ?: "")
-                        keyAliasState.setTextAndPlaceCursorAtEnd(result.keyAlias ?: "")
-                        keyPasswordState.setTextAndPlaceCursorAtEnd(result.keyPassword ?: "")
-                    } else {
-                        NotificationGroupManager.getInstance()
-                            .getNotificationGroup("ApkInstaller.NotificationGroup")
-                            .createNotification("ApkInstaller", "No signing configuration detected in Android modules.", NotificationType.WARNING)
-                            .notify(project)
-                    }
-                } catch (e: Exception) {
-                    NotificationGroupManager.getInstance()
-                        .getNotificationGroup("ApkInstaller.NotificationGroup")
-                        .createNotification("ApkInstaller", "Error during detection: ${e.message}", NotificationType.ERROR)
-                        .notify(project)
-                } finally {
-                    isDetecting = false
-                }
-            }
-        }
-    }
 
     LaunchedEffect(storeFileState.text, storePasswordState.text, keyAliasState.text, keyPasswordState.text) {
         onManualChange(SigningConfig(
@@ -73,44 +36,49 @@ fun SigningForm(
             storeFileState.text.toString(),
             storePasswordState.text.toString(),
             keyAliasState.text.toString(),
-            keyPasswordState.text.toString()
+            keyPasswordState.text.toString(),
+            "manual"
         ))
     }
 
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Signing Configuration", style = JewelTheme.defaultTextStyle)
-            Spacer(Modifier.weight(1f))
-            if (project != null) {
-                if (isDetecting) {
-                    Text("Detecting...", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
-                } else {
-                    Link("Auto Detect", onClick = { autoDetect() })
-                }
-            }
         }
         Spacer(Modifier.height(8.dp))
         
         if (configs.isNotEmpty()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                configs.forEach { config ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 12.dp)
-                    ) {
-                        RadioButton(
-                            selected = selectedConfig == config,
-                            onClick = {
-                                selectedConfig = config
-                                storeFileState.setTextAndPlaceCursorAtEnd(config.storeFile ?: "")
-                                storePasswordState.setTextAndPlaceCursorAtEnd(config.storePassword ?: "")
-                                keyAliasState.setTextAndPlaceCursorAtEnd(config.keyAlias ?: "")
-                                keyPasswordState.setTextAndPlaceCursorAtEnd(config.keyPassword ?: "")
-                                onConfigSelected(config)
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Dropdown(
+                    menuContent = {
+                        configs.forEach { config ->
+                            val isSelected = selectedConfig == config
+                            // Move theme access inside Composable content lambda or use remember if needed,
+                            // but JewelTheme is composable-aware.
+                            // The issue is likely accessing JewelTheme properties directly in a non-composable scope
+                            // However, menuContent IS a composable lambda.
+                            
+                            selectableItem(
+                                selected = isSelected,
+                                onClick = {
+                                    selectedConfig = config
+                                    storeFileState.setTextAndPlaceCursorAtEnd(config.storeFile ?: "")
+                                    storePasswordState.setTextAndPlaceCursorAtEnd(config.storePassword ?: "")
+                                    keyAliasState.setTextAndPlaceCursorAtEnd(config.keyAlias ?: "")
+                                    keyPasswordState.setTextAndPlaceCursorAtEnd(config.keyPassword ?: "")
+                                    onConfigSelected(config)
+                                }
+                            ) {
+                                Text("${config.moduleName}: ${config.name}")
                             }
-                        )
-                        Text(text = config.name, modifier = Modifier.padding(start = 4.dp))
-                    }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = selectedConfig?.let { "${it.moduleName}: ${it.name}" } ?: "Select from existing configs...",
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -135,19 +103,19 @@ fun SigningForm(
             }
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Key Alias", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
+                Text("Key Password", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
                 Spacer(Modifier.height(4.dp))
                 TextField(
-                    state = keyAliasState,
+                    state = keyPasswordState,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         }
         Spacer(Modifier.height(8.dp))
-        Text("Key Password", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
+        Text("Key Alias", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
         Spacer(Modifier.height(4.dp))
         TextField(
-            state = keyPasswordState,
+            state = keyAliasState,
             modifier = Modifier.fillMaxWidth()
         )
     }

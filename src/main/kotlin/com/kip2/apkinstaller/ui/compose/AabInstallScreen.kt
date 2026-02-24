@@ -27,7 +27,7 @@ fun AabInstallScreen(
     onCancel: () -> Unit
 ) {
     var selectedDevices by remember { mutableStateOf(emptyList<Device>()) }
-    var signingConfig by remember { mutableStateOf(SigningConfig("manual", "", "", "", "")) }
+    var signingConfig by remember { mutableStateOf(SigningConfig("manual", "", "", "", "", "manual")) }
     var isUniversalMode by remember { mutableStateOf(false) }
     var localTesting by remember { mutableStateOf(false) }
     var updateExisting by remember { mutableStateOf(true) }

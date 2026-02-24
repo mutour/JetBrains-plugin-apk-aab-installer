@@ -17,7 +17,8 @@ data class SigningConfig(
     val storeFile: String?,
     val storePassword: String?,
     val keyAlias: String?,
-    val keyPassword: String?
+    val keyPassword: String?,
+    val moduleName: String = "unknown"
 )
 
 /**
@@ -27,19 +28,6 @@ data class SigningConfig(
 class GradleSigningService(private val project: Project) {
 
     private val log: Logger = Logger.getInstance(GradleSigningService::class.java)
-
-    fun findBestSigningConfig(): SigningConfig? {
-        return try {
-            // Filter for main app module if possible (PROJECT_TYPE_APP = 1)
-            // Since we don't have direct access to constants, we look for 'app' in the name or hope the first one is correct
-            val allConfigs = findAllSigningConfigsFromGradleModel()
-            log.info("Total signing configs found via Gradle model: ${allConfigs.size}")
-            allConfigs.find { it.name.contains("release", ignoreCase = true) } ?: allConfigs.firstOrNull()
-        } catch (e: Exception) {
-            log.warn("Failed to find signing config via Gradle model: ${e.message}")
-            null
-        }
-    }
 
     fun getSigningConfigs(module: Module): List<SigningConfig> {
         return runReadAction {
@@ -60,7 +48,9 @@ class GradleSigningService(private val project: Project) {
                         // However, matching by path is tricky because DataNode payload types vary.
                         // Strategy: We will extract configs from ALL found Android models and return the aggregate.
                         // This is safer than failing to match a specific path string.
-                        return@runReadAction extractSigningConfigsFromModel(model)
+                        // Try to find the module name from the node hierarchy if possible, otherwise use the passed module.name
+                        val effectiveModuleName = findModuleName(node) ?: module.name
+                        return@runReadAction extractSigningConfigsFromModel(model, effectiveModuleName)
                     }
                 }
                 emptyList()
@@ -71,27 +61,41 @@ class GradleSigningService(private val project: Project) {
         }
     }
 
-    private fun findAllSigningConfigsFromGradleModel(): List<SigningConfig> {
-        val configs = mutableListOf<SigningConfig>()
-        val gradleSystemId = ProjectSystemId("GRADLE")
-        val projectsData = ProjectDataManager.getInstance().getExternalProjectsData(project, gradleSystemId)
+    fun getAllSigningConfigs(): List<SigningConfig> {
+        return runReadAction {
+            val configs = mutableListOf<SigningConfig>()
+            val gradleSystemId = ProjectSystemId("GRADLE")
+            val projectsData = ProjectDataManager.getInstance().getExternalProjectsData(project, gradleSystemId)
 
-        for (projectData in projectsData) {
-            val projectStructure = projectData.externalProjectStructure ?: continue
-            val androidModels = findAllAndroidModels(projectStructure)
+            for (projectData in projectsData) {
+                val projectStructure = projectData.externalProjectStructure ?: continue
+                val androidModels = findAllAndroidModels(projectStructure)
 
-            for (node in androidModels) {
-                val model = node.data ?: continue
-                configs.addAll(extractSigningConfigsFromModel(model))
+                for (node in androidModels) {
+                    val model = node.data ?: continue
+                    val moduleName = findModuleName(node) ?: "unknown"
+                    configs.addAll(extractSigningConfigsFromModel(model, moduleName))
+                }
             }
+            configs
         }
-        return configs
     }
 
-    /**
-     * Recursively finds all DataNodes that represent an Android Module Model.
-     * Uses string-based key matching to avoid ClassNotFoundException or unresolved references.
-     */
+    private fun findModuleName(node: DataNode<*>): String? {
+        var current: DataNode<*>? = node
+        while (current != null) {
+            // Check for ModuleData by key dataType string to avoid class dependency issues
+            if (current.key.dataType.contains("ModuleData")) {
+                 val data = current.data ?: return null
+                 val name = data.callMethodSafe("getModuleName") as? String
+                 if (!name.isNullOrEmpty()) return name
+                 return data.callMethodSafe("getExternalName") as? String
+            }
+            current = current.parent
+        }
+        return null
+    }
+
     private fun findAllAndroidModels(rootNode: DataNode<*>): List<DataNode<*>> {
         val result = mutableListOf<DataNode<*>>()
 
@@ -119,7 +123,7 @@ class GradleSigningService(private val project: Project) {
         return result
     }
 
-    private fun extractSigningConfigsFromModel(model: Any): List<SigningConfig> = runCatching {
+    private fun extractSigningConfigsFromModel(model: Any, moduleName: String): List<SigningConfig> = runCatching {
         val androidProject = model.callMethod("getAndroidProject")
 
         val projectType = runCatching {
@@ -136,7 +140,8 @@ class GradleSigningService(private val project: Project) {
             val storePassword = config.callMethodSafe("getStorePassword") as? String?
             val keyAlias = config.callMethodSafe("getKeyAlias") as? String?
             val keyPassword = config.callMethodSafe("getKeyPassword") as? String? // 内部没有这个
-            SigningConfig(name, storeFile?.absolutePath, storePassword, keyAlias, keyPassword)
+            
+            SigningConfig(name, storeFile?.absolutePath, storePassword, keyAlias, keyPassword, moduleName)
         }
     }.getOrElse { emptyList() }
 

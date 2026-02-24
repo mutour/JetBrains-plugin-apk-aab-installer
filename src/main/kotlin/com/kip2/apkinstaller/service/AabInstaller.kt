@@ -73,7 +73,9 @@ class AabInstaller(
             cmd.add("--ks=${signing.storeFile}")
             cmd.add("--ks-pass=pass:${signing.storePassword}")
             cmd.add("--ks-key-alias=${signing.keyAlias}")
-            cmd.add("--key-pass=pass:${signing.keyPassword}")
+            
+            val kp = if (signing.keyPassword.isNullOrBlank()) signing.storePassword else signing.keyPassword
+            cmd.add("--key-pass=pass:${kp}")
         }
 
         val process = ProcessBuilder(cmd).redirectErrorStream(true).start()

@@ -86,8 +86,8 @@ class InstallAction : AnAction() {
 
         if (isAab) {
             val signingService = GradleSigningService(project)
-            val module = signingService.findModuleForFile(file.path)
-            val configs = if (module != null) signingService.getSigningConfigs(module) else emptyList()
+            // Get all signing configs from all modules to show in dropdown
+            val configs = signingService.getAllSigningConfigs()
 
             val dialog = AabInstallDialog(project, devices, configs)
             if (!dialog.showAndGet()) return
