@@ -48,8 +48,11 @@ import org.jetbrains.jewel.foundation.theme.JewelTheme
 import org.jetbrains.jewel.ui.Orientation
 import org.jetbrains.jewel.ui.component.*
 import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.*
 import java.io.File
+import java.awt.BorderLayout
+import javax.swing.JPanel
+import javax.swing.TransferHandler
+import javax.swing.TransferHandler.TransferSupport
 
 class MyToolWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
@@ -72,51 +75,39 @@ class MyToolWindowFactory : ToolWindowFactory {
         val composePanel = JewelComposePanel(focusOnClickInside = true) {
             MyToolWindowContent(project, isDragging, onFileSelect)
         }
-        
-        composePanel.dropTarget = object : DropTarget() {
-            override fun dragEnter(dtde: DropTargetDragEvent) {
-                if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                    dtde.acceptDrag(DnDConstants.ACTION_COPY)
-                    isDragging.value = true
-                } else {
-                    dtde.rejectDrag()
-                }
+
+        // Wrap ComposePanel in a standard JPanel to support TransferHandler
+        val mainPanel = JPanel(BorderLayout())
+        mainPanel.add(composePanel, BorderLayout.CENTER)
+
+        // Use TransferHandler instead of DropTarget for reliable DnD
+        mainPanel.transferHandler = object : TransferHandler() {
+            override fun canImport(support: TransferSupport): Boolean {
+                val canImport = support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
+                isDragging.value = canImport
+                return canImport
             }
 
-            override fun dragOver(dtde: DropTargetDragEvent) {
-                if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                    dtde.acceptDrag(DnDConstants.ACTION_COPY)
-                } else {
-                    dtde.rejectDrag()
-                }
-            }
-
-            override fun dragExit(dte: DropTargetEvent) {
+            override fun importData(support: TransferSupport): Boolean {
                 isDragging.value = false
-            }
+                if (!canImport(support)) return false
 
-            override fun drop(dtde: DropTargetDropEvent) {
-                isDragging.value = false
-                try {
-                    if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                        dtde.acceptDrop(DnDConstants.ACTION_COPY)
-                        val transferable = dtde.transferable
-                        val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<*>
-                        val file = files.firstOrNull() as? File
-                        if (file != null) {
-                            handleFileInstall(project, file)
-                            dtde.dropComplete(true)
-                            return
-                        }
+                return try {
+                    val files = support.transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<*>
+                    val file = files.firstOrNull() as? File
+                    if (file != null) {
+                        handleFileInstall(project, file)
+                        true
+                    } else {
+                        false
                     }
-                    dtde.rejectDrop()
                 } catch (e: Exception) {
-                    dtde.dropComplete(false)
+                    false
                 }
             }
         }
 
-        val content = ContentFactory.getInstance().createContent(composePanel, "Installer & Settings", false)
+        val content = ContentFactory.getInstance().createContent(mainPanel, "Installer & Settings", false)
         toolWindow.contentManager.addContent(content)
     }
 }
