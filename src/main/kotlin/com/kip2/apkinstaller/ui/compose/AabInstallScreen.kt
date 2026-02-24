@@ -18,6 +18,10 @@ data class AabInstallOptions(
     val updateExisting: Boolean
 )
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 @Composable
 fun AabInstallScreen(
     project: com.intellij.openapi.project.Project?,
@@ -27,7 +31,13 @@ fun AabInstallScreen(
     onCancel: () -> Unit
 ) {
     var selectedDevices by remember { mutableStateOf(emptyList<Device>()) }
-    var signingConfig by remember { mutableStateOf(SigningConfig("manual", "", "", "", "", "manual")) }
+    // Initialize with first config if available, otherwise default manual
+    var signingConfig by remember { 
+        mutableStateOf(if (detectedConfigs.isNotEmpty()) detectedConfigs[0] else SigningConfig("manual", "", "", "", "", "manual")) 
+    }
+    var configs by remember { mutableStateOf(detectedConfigs) }
+    val coroutineScope = rememberCoroutineScope()
+
     var isUniversalMode by remember { mutableStateOf(false) }
     var localTesting by remember { mutableStateOf(false) }
     var updateExisting by remember { mutableStateOf(true) }
@@ -51,9 +61,47 @@ fun AabInstallScreen(
             Column(modifier = Modifier.weight(0.6f)) {
                 SigningForm(
                     project = project,
-                    configs = detectedConfigs,
+                    configs = configs,
                     onConfigSelected = { signingConfig = it },
-                    onManualChange = { signingConfig = it },
+                    onManualChange = { newConfig ->
+                        signingConfig = newConfig
+                        // Update configs list to include this custom config
+                        val mutable = configs.toMutableList()
+                        // Replace existing Custom config or add new one
+                        val existingIndex = mutable.indexOfFirst { it.name == newConfig.name && it.moduleName == newConfig.moduleName }
+                        if (existingIndex >= 0) {
+                            mutable[existingIndex] = newConfig
+                        } else {
+                            mutable.add(newConfig)
+                        }
+                        configs = mutable.toList()
+                        
+                        // Save immediately
+                        if (project != null) {
+                            com.kip2.apkinstaller.settings.ProjectSigningSettings.getInstance(project).addConfig(newConfig)
+                        }
+                    },
+                    onDetectConfigs = {
+                        if (project != null) {
+                            coroutineScope.launch {
+                                val detected = withContext(Dispatchers.IO) {
+                                    com.kip2.apkinstaller.service.GradleSigningService(project).getAllSigningConfigs()
+                                }
+                                // Merge detected with existing custom ones
+                                val currentCustoms = configs.filter { it.moduleName == "User" || it.name == "Custom" }
+                                val merged = (detected + currentCustoms).distinctBy { "${it.moduleName}:${it.name}" }
+                                configs = merged
+                                
+                                // Auto-select first if available and current is invalid or manual
+                                if (merged.isNotEmpty() && (signingConfig.name == "manual" || signingConfig.name.isEmpty())) {
+                                    signingConfig = merged[0]
+                                }
+                                
+                                // Save to project settings
+                                com.kip2.apkinstaller.settings.ProjectSigningSettings.getInstance(project).saveConfigs(merged)
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
 

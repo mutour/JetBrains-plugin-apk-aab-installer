@@ -21,29 +21,67 @@ fun SigningForm(
     configs: List<SigningConfig>,
     onConfigSelected: (SigningConfig) -> Unit,
     onManualChange: (SigningConfig) -> Unit,
+    onDetectConfigs: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedConfig by remember { mutableStateOf<SigningConfig?>(null) }
+    var selectedConfig by remember { mutableStateOf<SigningConfig?>(if (configs.isNotEmpty()) configs[0] else null) }
     
-    val storeFileState = rememberTextFieldState("")
-    val storePasswordState = rememberTextFieldState("")
-    val keyAliasState = rememberTextFieldState("")
-    val keyPasswordState = rememberTextFieldState("")
+    val storeFileState = rememberTextFieldState(selectedConfig?.storeFile ?: "")
+    val storePasswordState = rememberTextFieldState(selectedConfig?.storePassword ?: "")
+    val keyAliasState = rememberTextFieldState(selectedConfig?.keyAlias ?: "")
+    val keyPasswordState = rememberTextFieldState(selectedConfig?.keyPassword ?: "")
+
+    // Initial selection propagation
+    LaunchedEffect(Unit) {
+        if (selectedConfig != null) {
+            onConfigSelected(selectedConfig!!)
+        }
+    }
 
     LaunchedEffect(storeFileState.text, storePasswordState.text, keyAliasState.text, keyPasswordState.text) {
-        onManualChange(SigningConfig(
-            "manual",
-            storeFileState.text.toString(),
-            storePasswordState.text.toString(),
-            keyAliasState.text.toString(),
-            keyPasswordState.text.toString(),
-            "manual"
-        ))
+        val currentStoreFile = storeFileState.text.toString()
+        val currentStorePassword = storePasswordState.text.toString()
+        val currentKeyAlias = keyAliasState.text.toString()
+        val currentKeyPassword = keyPasswordState.text.toString()
+
+        // Check if current values match selected config
+        val match = selectedConfig?.let {
+            it.storeFile == currentStoreFile &&
+            it.storePassword == currentStorePassword &&
+            it.keyAlias == currentKeyAlias &&
+            it.keyPassword == currentKeyPassword
+        } ?: false
+
+        if (!match) {
+            // Values changed from preset, switch to custom
+            val newConfig = SigningConfig(
+                "Custom",
+                currentStoreFile,
+                currentStorePassword,
+                currentKeyAlias,
+                currentKeyPassword,
+                "User"
+            )
+            // If we are not already on a custom config, or if we are updating it
+            if (selectedConfig?.name != "Custom" || selectedConfig?.moduleName != "User") {
+                selectedConfig = newConfig
+            } else {
+                // We are already on custom, just update the object reference for parent
+                selectedConfig = newConfig
+            }
+            onManualChange(newConfig)
+        }
     }
 
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Signing Configuration", style = JewelTheme.defaultTextStyle)
+            Spacer(Modifier.weight(1f))
+            if (project != null) {
+                DefaultButton(onClick = onDetectConfigs) {
+                    Text("Detect Gradle Configs")
+                }
+            }
         }
         Spacer(Modifier.height(8.dp))
         
@@ -86,10 +124,24 @@ fun SigningForm(
 
         Text("Keystore Path", style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
         Spacer(Modifier.height(4.dp))
-        TextField(
-            state = storeFileState,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextField(
+                state = storeFileState,
+                modifier = Modifier.weight(1f)
+            )
+            if (project != null) {
+                Spacer(Modifier.width(8.dp))
+                DefaultButton(onClick = {
+                    val descriptor = com.intellij.openapi.filechooser.FileChooserDescriptorFactory.createSingleFileDescriptor()
+                    descriptor.title = "Select Keystore File"
+                    com.intellij.openapi.filechooser.FileChooser.chooseFile(descriptor, project, null) { file ->
+                        storeFileState.setTextAndPlaceCursorAtEnd(file.path)
+                    }
+                }) {
+                    Text("...")
+                }
+            }
+        }
         Spacer(Modifier.height(8.dp))
         
         Row(modifier = Modifier.fillMaxWidth()) {

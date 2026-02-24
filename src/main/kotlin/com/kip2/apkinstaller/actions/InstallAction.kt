@@ -85,9 +85,9 @@ class InstallAction : AnAction() {
         var finalTargetDevices = emptyList<com.kip2.apkinstaller.model.Device>()
 
         if (isAab) {
-            val signingService = GradleSigningService(project)
-            // Get all signing configs from all modules to show in dropdown
-            val configs = signingService.getAllSigningConfigs()
+            // Load saved configs
+            val signingService = com.kip2.apkinstaller.settings.ProjectSigningSettings.getInstance(project)
+            val configs = signingService.getConfigs()
 
             val dialog = AabInstallDialog(project, devices, configs)
             if (!dialog.showAndGet()) return
