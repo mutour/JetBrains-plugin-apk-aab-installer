@@ -17,10 +17,6 @@
     <extensions defaultExtensionNs="com.intellij">
         <notificationGroup id="ApkInstaller.NotificationGroup" displayType="BALLOON" bundle="messages.InstallerBundle" key="apk.installer.notification.group"/>
         <applicationService serviceImplementation="com.kip2.apkinstaller.settings.PluginSettings"/>
-        <projectConfigurable parentId="tools"
-                             instance="com.kip2.apkinstaller.settings.SettingsConfigurable"
-                             id="com.kip2.apkinstaller.settings.SettingsConfigurable"
-                             key="settings.display.name"/>
         <toolWindow id="ApkInstaller" factoryClass="com.kip2.apkinstaller.toolwindow.MyToolWindowFactory"
                     icon="AllIcons.Toolwindows.ToolWindowPalette"/>
     </extensions>
