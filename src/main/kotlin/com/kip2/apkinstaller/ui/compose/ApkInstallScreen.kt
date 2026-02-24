@@ -35,11 +35,11 @@ fun ApkInstallScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End
         ) {
-            DefaultButton(onClick = onCancel) {
+            OutlinedButton(onClick = onCancel) {
                 Text("Cancel")
             }
             Spacer(Modifier.width(12.dp))
-            OutlinedButton(
+            DefaultButton(
                 onClick = { onInstall(selectedDevices) },
                 enabled = selectedDevices.isNotEmpty()
             ) {

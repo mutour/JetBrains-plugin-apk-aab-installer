@@ -138,11 +138,11 @@ fun AabInstallScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End
         ) {
-            DefaultButton(onClick = onCancel) {
+            OutlinedButton(onClick = onCancel) {
                 Text(InstallerBundle.message("dialog.cancel.button"))
             }
             Spacer(Modifier.width(12.dp))
-            OutlinedButton(
+            DefaultButton(
                 onClick = {
                     onInstall(
                         AabInstallOptions(
