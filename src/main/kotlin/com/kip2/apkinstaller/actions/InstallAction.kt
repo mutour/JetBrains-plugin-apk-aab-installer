@@ -94,9 +94,14 @@ class InstallAction : AnAction() {
             aabOptions = dialog.installOptions ?: return
             finalTargetDevices = aabOptions.selectedDevices
         } else {
-            val dialog = DeviceSelectionDialog(project, devices)
-            if (!dialog.showAndGet()) return
-            finalTargetDevices = dialog.getSelectedDevices()
+            // If only one device, skip selection dialog
+            if (devices.size == 1) {
+                finalTargetDevices = devices
+            } else {
+                val dialog = DeviceSelectionDialog(project, devices)
+                if (!dialog.showAndGet()) return
+                finalTargetDevices = dialog.getSelectedDevices()
+            }
         }
 
         if (finalTargetDevices.isEmpty()) return

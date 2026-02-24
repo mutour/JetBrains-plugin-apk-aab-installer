@@ -15,7 +15,7 @@ fun ApkInstallScreen(
     onInstall: (List<Device>) -> Unit,
     onCancel: () -> Unit
 ) {
-    var selectedDevices by remember { mutableStateOf(emptyList<Device>()) }
+    var selectedDevices by remember { mutableStateOf(if (devices.isNotEmpty()) listOf(devices[0]) else emptyList<Device>()) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Select Target Devices", style = JewelTheme.defaultTextStyle)

@@ -29,7 +29,7 @@ fun AabInstallScreen(
     onInstall: (AabInstallOptions) -> Unit,
     onCancel: () -> Unit
 ) {
-    var selectedDevices by remember { mutableStateOf(emptyList<Device>()) }
+    var selectedDevices by remember { mutableStateOf(if (devices.isNotEmpty()) listOf(devices[0]) else emptyList<Device>()) }
     // Initialize with first config if available, otherwise default manual
     var signingConfig by remember {
         mutableStateOf(if (detectedConfigs.isNotEmpty()) detectedConfigs[0] else SigningConfig("manual", "", "", "", "", "manual"))
