@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.kip2"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -38,8 +38,37 @@ intellijPlatform {
             sinceBuild = "241"
         }
 
+        description = """
+            <h3>APK/AAB Multi-Device Installer</h3>
+            <p>Streamline your Android deployment process by installing packages to one or multiple devices simultaneously.</p>
+            
+            <h4>Key Features:</h4>
+            <ul>
+                <li><b>Multi-Device Deployment:</b> Select and install APK or AAB files to one or multiple connected Android devices/emulators at once.</li>
+                <li><b>Smart ADB Detection:</b> Automatically lists all connected devices via ADB with real-time status updates.</li>
+                <li><b>AAB Support:</b> Seamlessly handles Android App Bundles (.aab) alongside standard APKs.</li>
+                <li><b>Modern UI:</b> A clean, native-looking interface built with JetBrains Compose and Jewel.</li>
+                <li><b>Background Execution:</b> All installation processes run in the background, keeping your IDE responsive.</li>
+            </ul>
+
+            <h4>🛠 Technical Information</h4>
+            <ul>
+                <li><b>Architecture:</b> Built with 100% Kotlin for high-performance integration with the IntelliJ Platform.</li>
+                <li><b>UI Framework:</b> Developed using <b>JetBrains Compose for Desktop</b> and <b>Jewel</b>.</li>
+                <li><b>Concurrency Model:</b> Utilizes background threads (Task.Backgroundable) to ensure fluid UI.</li>
+                <li><b>Security & Privacy:</b> Operates entirely locally; no data collection or external transmission.</li>
+            </ul>
+        """.trimIndent()
+
         changeNotes = """
-            Initial version
+            <h4>🚀 Initial Release (v1.0.0)</h4>
+            <p>We are excited to introduce the first version of the <b>APK/AAB Multi-Device Installer</b>.</p>
+            <ul>
+                <li><b>Multi-Device Deployment:</b> Install APK/AAB to multiple devices simultaneously.</li>
+                <li><b>Smart ADB Detection:</b> Real-time detection of connected devices.</li>
+                <li><b>AAB Support:</b> Integrated bundletool handling for App Bundles.</li>
+                <li><b>Modern UI:</b> Built with Compose and Jewel for a native IDE experience.</li>
+            </ul>
         """.trimIndent()
     }
 }
