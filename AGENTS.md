@@ -21,16 +21,12 @@ The current project is an **APK/AAB Multi-Device Installer** plugin. Its primary
 
 ---
 
-## 🎨 2. UI Framework (Compose & Jewel)
+**Priority:** All UI components (Dialogs, ToolWindows, Settings) must be built using the native **IntelliJ Kotlin UI DSL v2**.
 
-**Priority:** All new UI components (Dialogs, ToolWindows, Settings) must be built using **Compose for Desktop** with the **Jewel** library.
-
-- **Library:** Use **Jewel** (`org.jetbrains.jewel`) to ensure the UI matches the native IDE theme (IntelliJ Light, Darcula, New UI).
-- **Integration:**
-    - Wrap Compose content inside a `ComposePanel` when returning a JComponent for `DialogWrapper`.
-    - Always wrap the root Compose function in `SwingBridgeTheme` or `JewelTheme` to inherit IDE styling.
-- **State Management:** Use Compose `MutableState` and `remember` for UI logic (e.g., toggling device checkboxes).
-- **Fallback:** Only use *Kotlin UI DSL v2* if the UI is extremely simple (e.g., a single text input). **Never** use legacy Swing (`JPanel`, `GridBagLayout`) or `.form` files.
+- **Framework:** Use `com.intellij.ui.dsl.builder.panel` to construct layouts.
+- **Components:** Prefer `JBCheckBox`, `JBTextField`, and other `JB` prefixed Swing components from the platform.
+- **Interactivity:** Use `bindSelected`, `bindText`, and `onChanged` for state binding and events.
+- **Restriction:** **DO NOT** use Compose for Desktop or the Jewel library. These have been removed to reduce package size and ensure maximum compatibility across IDE versions.
 
 ---
 
@@ -95,5 +91,4 @@ If you generate code containing these patterns, you are wrong:
 4. **Using `System.out.println`:** Use `com.intellij.openapi.diagnostic.Logger` instead.
 
 ---
-*Message to AI:*
-**Please internalize these rules. When asked to implement the "Device Selection Dialog", you must provide a solution using JetBrains Compose (Jewel) wrapped in a DialogWrapper.**
+**Please internalize these rules. When asked to implement UI components, you must provide a solution using the IntelliJ Kotlin UI DSL v2.**
