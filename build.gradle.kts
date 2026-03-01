@@ -2,13 +2,13 @@ plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.1.20"
     id("org.jetbrains.intellij.platform") version "2.11.0"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
 }
 
 group = "com.kip2"
-version = "1.0.1"
+version = "1.0.2"
 
 repositories {
+    google()
     mavenCentral()
     intellijPlatform {
         defaultRepositories()
@@ -19,13 +19,11 @@ repositories {
 dependencies {
     intellijPlatform {
 //        intellijIdea("2025.2.4")
-        local("/Users/king/Applications/Android Studio.app")
+        local("/Users/king/Applications/IntelliJ IDEA.app")
+//        local("/Users/king/Applications/Android Studio.app")
 //        local("/Users/king/Applications/WebStorm.app")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
 
-        // Compose support provided by the platform
-        @Suppress("UnstableApiUsage")
-        composeUI()
     }
 }
 
@@ -54,7 +52,7 @@ intellijPlatform {
             <h4>🛠 Technical Information</h4>
             <ul>
                 <li><b>Architecture:</b> Built with 100% Kotlin for high-performance integration with the IntelliJ Platform.</li>
-                <li><b>UI Framework:</b> Developed using <b>JetBrains Compose for Desktop</b> and <b>Jewel</b>.</li>
+                <li><b>UI Framework:</b> Developed using native <b>IntelliJ Kotlin UI DSL v2</b> for maximum compatibility and minimal size.</li>
                 <li><b>Concurrency Model:</b> Utilizes background threads (Task.Backgroundable) to ensure fluid UI.</li>
                 <li><b>Security & Privacy:</b> Operates entirely locally; no data collection or external transmission.</li>
             </ul>
@@ -67,10 +65,17 @@ intellijPlatform {
                 <li><b>Multi-Device Deployment:</b> Install APK/AAB to multiple devices simultaneously.</li>
                 <li><b>Smart ADB Detection:</b> Real-time detection of connected devices.</li>
                 <li><b>AAB Support:</b> Integrated bundletool handling for App Bundles.</li>
-                <li><b>Modern UI:</b> Built with Compose and Jewel for a native IDE experience.</li>
+                <li><b>Modern UI:</b> Refactored to native Kotlin UI DSL v2 for 2024.x compatibility and package size optimization.</li>
             </ul>
         """.trimIndent()
     }
+//    pluginVerification {
+//        ides {
+//            ide("IC-2024.1.6")
+//            ide("IC-2024.2.4")
+//            ide("IC-2024.3.3")
+//        }
+//    }
 }
 
 tasks {

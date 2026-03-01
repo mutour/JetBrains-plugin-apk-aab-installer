@@ -10,7 +10,9 @@
     <depends>com.intellij.modules.platform</depends>
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
-    <depends>com.intellij.modules.compose</depends>
+
+    <depends>com.intellij.modules.externalSystem</depends>
+    <depends>com.intellij.modules.java</depends>
 <!--    <depends optional="true" config-file="android-support.xml">org.jetbrains.android</depends>-->
 
     <resource-bundle>messages.InstallerBundle</resource-bundle>

@@ -20,7 +20,7 @@ import com.kip2.apkinstaller.service.AabInstaller
 import com.kip2.apkinstaller.ui.DeviceSelectionDialog
 import com.kip2.apkinstaller.ui.AabInstallDialog
 import com.kip2.apkinstaller.service.GradleSigningService
-import com.kip2.apkinstaller.ui.compose.AabInstallOptions
+import com.kip2.apkinstaller.ui.AabInstallOptions
 
 class InstallAction : AnAction() {
 
@@ -105,7 +105,7 @@ class InstallAction : AnAction() {
             val signingService = com.kip2.apkinstaller.settings.ProjectSigningSettings.getInstance(project)
             val configs = signingService.getConfigs()
 
-            val dialog = AabInstallDialog(project, devices, configs)
+            val dialog = AabInstallDialog(project, devices, configs, file.path)
             if (!dialog.showAndGet()) return
             aabOptions = dialog.installOptions ?: return
             finalTargetDevices = aabOptions.selectedDevices
