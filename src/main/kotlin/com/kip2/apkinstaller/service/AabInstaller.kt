@@ -7,7 +7,7 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.util.ExecUtil
 import com.intellij.openapi.progress.ProgressIndicator
 import com.kip2.apkinstaller.InstallerBundle
-import com.kip2.apkinstaller.ui.compose.AabInstallOptions
+import com.kip2.apkinstaller.ui.AabInstallOptions
 import java.io.File
 
 class AabInstaller(
@@ -39,7 +39,12 @@ class AabInstaller(
 
             indicator.text = InstallerBundle.message("status.installing.to", device.name)
             indicator.fraction = 0.5 + index.toDouble() / devices.size * 0.5
-
+            if (options.allowIncompatibleUpdate) {
+                val packageName = getPackageName(bundletoolResult, aabFile)
+                if (packageName != null) {
+                    uninstallApp(adbPath, device, packageName)
+                }
+            }
             // Ensure file is deleted even if installation fails
             try {
                 val result = installApks(adbPath, apksFile, device, options.updateExisting)
@@ -137,5 +142,23 @@ class AabInstaller(
             success = exitCode == 0,
             output = output
         )
+    }
+
+    private fun uninstallApp(adbPath: String, device: Device, packageName: String) {
+        val cmd = GeneralCommandLine(adbPath, "-s", device.id, "uninstall", packageName)
+        ExecUtil.execAndGetOutput(cmd)
+    }
+
+    private fun getPackageName(bundletoolPath: String, aabFile: File): String? {
+        val cmd = GeneralCommandLine("java", "-jar", bundletoolPath, "dump", "manifest", "--bundle=${aabFile.absolutePath}")
+        val output = ExecUtil.execAndGetOutput(cmd)
+        if (output.exitCode != 0) return null
+        // Search for package="..." in the manifest dump
+        val stdout = output.stdout
+        val regex = Regex("""package="([^"]+)"""")
+        return regex.find(stdout)?.groupValues?.get(1) ?: run {
+            // Fallback: look for packageName: ...
+            Regex("""packageName: ([^\s]+)""").find(stdout)?.groupValues?.get(1)
+        }
     }
 }

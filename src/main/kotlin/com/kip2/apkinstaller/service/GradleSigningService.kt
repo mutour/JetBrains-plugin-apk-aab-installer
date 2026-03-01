@@ -35,6 +35,7 @@ class GradleSigningService(private val project: Project) {
                 val gradleSystemId = ProjectSystemId("GRADLE")
                 val modulePath = ExternalSystemApiUtil.getExternalProjectPath(module) ?: return@runReadAction emptyList()
                 val projectsData = ProjectDataManager.getInstance().getExternalProjectsData(project, gradleSystemId)
+                log.info("Found ${projectsData.size} external projects data for $gradleSystemId")
 
                 for (projectData in projectsData) {
                     val projectStructure = projectData.externalProjectStructure ?: continue
@@ -42,12 +43,6 @@ class GradleSigningService(private val project: Project) {
 
                     for (node in androidModels) {
                         val model = node.data ?: continue
-                        val nodeData = node.data ?: continue
-                        // Simplification: In the context of getSigningConfigs, if we found *any* Android model data node
-                        // that belongs to this project structure, it is likely the one we want if we are iterating.
-                        // However, matching by path is tricky because DataNode payload types vary.
-                        // Strategy: We will extract configs from ALL found Android models and return the aggregate.
-                        // This is safer than failing to match a specific path string.
                         // Try to find the module name from the node hierarchy if possible, otherwise use the passed module.name
                         val effectiveModuleName = findModuleName(node) ?: module.name
                         return@runReadAction extractSigningConfigsFromModel(model, effectiveModuleName)
@@ -84,7 +79,6 @@ class GradleSigningService(private val project: Project) {
     private fun findModuleName(node: DataNode<*>): String? {
         var current: DataNode<*>? = node
         while (current != null) {
-            // Check for ModuleData by key dataType string to avoid class dependency issues
             if (current.key.dataType.contains("ModuleData")) {
                  val data = current.data ?: return null
                  val name = data.callMethodSafe("getModuleName") as? String
@@ -99,47 +93,45 @@ class GradleSigningService(private val project: Project) {
     private fun findAllAndroidModels(rootNode: DataNode<*>): List<DataNode<*>> {
         val result = mutableListOf<DataNode<*>>()
 
-        // Helper function for recursive traversal
         fun traverse(node: DataNode<*>) {
-            // Check if this node matches the Android Model key
-            // The standard key is "android.gradle.module.model" (internal) or accessible via dataType
-            // Match "AndroidModuleModel" (Gradle) or "AndroidProject" (Generic)
-            val dataType = node.key.dataType
-            if (dataType.contains("GradleAndroidModelData")) {
-                // New AGP versions (8.x+) use this key which wraps the AndroidProject
+            val keyString = node.key.toString()
+            val dataClassName = node.data?.javaClass?.name ?: ""
+            log.info("Traversing DataNode: key=$keyString, dataClass=$dataClassName")
+            if (keyString.contains("AndroidProject") || 
+                keyString.contains("AndroidModuleModel") || 
+                keyString.contains("GradleAndroidModelData") ||
+                dataClassName.contains("AndroidProject") ||
+                dataClassName.contains("AndroidModuleModel") ||
+                dataClassName.contains("GradleAndroidModelData")) {
                 result.add(node)
             }
-            if (dataType.contains("AndroidModuleModel") || dataType.contains("AndroidProject")) {
-                result.add(node)
-            }
-
-            // Continue recursion
             for (child in node.children) {
                 traverse(child)
             }
         }
-
         traverse(rootNode)
         return result
     }
-
     private fun extractSigningConfigsFromModel(model: Any, moduleName: String): List<SigningConfig> = runCatching {
+        // model might be GradleAndroidModelData or AndroidModuleModel
+        // Both usually have getAndroidProject()
         val androidProject = model.callMethod("getAndroidProject")
 
         val projectType = runCatching {
             androidProject.callMethod("getProjectType").callMethod("name")
         }.getOrNull()
-        // PROJECT_TYPE_APP和PROJECT_TYPE_LIBRARY
+        
         if (projectType == "PROJECT_TYPE_LIBRARY") {
             return emptyList()
         }
+        
         val configs = androidProject.callMethod("getSigningConfigs") as Collection<*>
         configs.filterNotNull().map { config ->
             val name = config.callMethodSafe("getName") as? String ?: ""
             val storeFile = config.callMethodSafe("getStoreFile") as? File?
             val storePassword = config.callMethodSafe("getStorePassword") as? String?
             val keyAlias = config.callMethodSafe("getKeyAlias") as? String?
-            val keyPassword = config.callMethodSafe("getKeyPassword") as? String? // 内部没有这个
+            val keyPassword = config.callMethodSafe("getKeyPassword") as? String?
             
             SigningConfig(name, storeFile?.absolutePath, storePassword, keyAlias, keyPassword, moduleName)
         }
@@ -148,6 +140,7 @@ class GradleSigningService(private val project: Project) {
     fun findModuleForFile(filePath: String): Module? {
         return runReadAction {
             val file = com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(filePath) ?: return@runReadAction null
+            log.info("Finding module for file: $filePath")
             com.intellij.openapi.module.ModuleUtilCore.findModuleForFile(file, project)
         }
     }
