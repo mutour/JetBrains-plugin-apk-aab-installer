@@ -1,27 +1,20 @@
 package com.kip2.apkinstaller.toolwindow
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+import com.intellij.openapi.ui.SimpleToolWindowPanel
+import com.intellij.ui.ScrollPaneFactory
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.components.ActionLink
+import com.intellij.ui.dsl.builder.Align
+import com.intellij.ui.dsl.builder.bindText
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooser
-import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -39,15 +32,15 @@ import com.kip2.apkinstaller.service.GradleSigningService
 import com.kip2.apkinstaller.settings.PluginSettings
 import com.kip2.apkinstaller.ui.AabInstallDialog
 import com.kip2.apkinstaller.ui.DeviceSelectionDialog
-import com.kip2.apkinstaller.ui.compose.AabInstallOptions
+import com.kip2.apkinstaller.ui.AabInstallOptions
 import com.kip2.apkinstaller.util.AdbLocator
 import com.kip2.apkinstaller.util.BundletoolHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.jewel.bridge.JewelComposePanel
-import org.jetbrains.jewel.foundation.theme.JewelTheme
-import org.jetbrains.jewel.ui.Orientation
-import org.jetbrains.jewel.ui.component.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import com.intellij.openapi.Disposable
 
 import java.io.File
 
@@ -56,163 +49,104 @@ class MyToolWindowFactory : ToolWindowFactory {
     override fun shouldBeAvailable(project: Project) = true
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val onFileSelect = {
-            val descriptor = FileChooserDescriptorFactory.createSingleFileNoJarsDescriptor()
-                .withTitle("Select APK or AAB")
-                .withDescription("Choose an .apk or .aab file to install")
-                .withFileFilter { file -> file.extension?.lowercase() in listOf("apk", "aab") }
-            
-            val file = FileChooser.chooseFile(descriptor, project, null)
-            if (file != null) {
-                handleFileInstall(project, File(file.path))
-            }
-        }
-
-        val composePanel = JewelComposePanel(focusOnClickInside = true) {
-            MyToolWindowContent(project, onFileSelect)
-        }
-
-        val content = ContentFactory.getInstance().createContent(composePanel, InstallerBundle.message("settings.display.name"), false)
+        val toolWindowPanel = MyToolWindowPanel(project)
+        val content = ContentFactory.getInstance().createContent(toolWindowPanel, InstallerBundle.message("settings.display.name"), false)
         toolWindow.contentManager.addContent(content)
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-private fun MyToolWindowContent(
-    project: Project, 
-    onFileSelect: () -> Unit
-) {
-    val settings = PluginSettings.getInstance()
-    val adbPathState = rememberTextFieldState(settings.adbPath)
-    val bundletoolPathState = rememberTextFieldState(settings.bundletoolPath)
-
-    var detectedAdbPaths by remember { mutableStateOf(emptyList<String>()) }
-    var detectedBundletoolPaths by remember { mutableStateOf(emptyList<String>()) }
-    var isEnvLoading by remember { mutableStateOf(true) }
-
-    val scrollState = rememberScrollState()
-
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            detectedAdbPaths = AdbLocator().findAdbPaths()
-            detectedBundletoolPaths = BundletoolHelper().findBundletoolPaths()
-            isEnvLoading = false
-        }
-    }
-
-    LaunchedEffect(adbPathState.text) {
-        settings.adbPath = adbPathState.text.toString()
-    }
-
-    LaunchedEffect(bundletoolPathState.text) {
-        settings.bundletoolPath = bundletoolPathState.text.toString()
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = InstallerBundle.message("settings.environment.title"),
-            style = JewelTheme.defaultTextStyle.copy(fontSize = 16.sp)
-        )
-
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(InstallerBundle.message("settings.adb.path.label"), style = JewelTheme.defaultTextStyle)
-            TextField(
-                state = adbPathState,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(InstallerBundle.message("settings.adb.path.placeholder")) }
-            )
-
-            if (detectedAdbPaths.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(InstallerBundle.message("settings.detected.label"), style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
-                    detectedAdbPaths.take(3).forEach { path ->
-                        Link(path, onClick = { adbPathState.setTextAndPlaceCursorAtEnd(path) })
+class MyToolWindowPanel(private val project: Project) : SimpleToolWindowPanel(false, true), Disposable {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val settings = PluginSettings.getInstance()
+    
+    init {
+        val panel = panel {
+            group(InstallerBundle.message("settings.environment.title")) {
+                row(InstallerBundle.message("settings.adb.path.label")) {
+                    textFieldWithBrowseButton(project = project, fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFileDescriptor())
+                        .bindText(settings::adbPath)
+                        .align(AlignX.FILL)
+                }
+                row(InstallerBundle.message("settings.detected.label")) {
+                    val adbLocator = AdbLocator()
+                    val adbPaths = adbLocator.findAdbPaths()
+                    adbPaths.take(3).forEach { path ->
+                        cell(ActionLink(path) { settings.adbPath = path })
                     }
                 }
-            }
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(InstallerBundle.message("settings.bundletool.path.label"), style = JewelTheme.defaultTextStyle)
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextField(
-                    state = bundletoolPathState,
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text(InstallerBundle.message("settings.bundletool.path.placeholder")) }
-                )
-                OutlinedButton(onClick = {
-                    ProgressManager.getInstance().run(object : Task.Backgroundable(project, InstallerBundle.message("settings.downloading.bundletool"), true) {
-                        override fun run(indicator: ProgressIndicator) {
-                            try {
-                                val file = BundletoolHelper().downloadBundletool(indicator)
-                                ApplicationManager.getApplication().invokeLater {
-                                    bundletoolPathState.setTextAndPlaceCursorAtEnd(file.absolutePath)
-                                }
-                            } catch (e: Exception) {
-                                NotificationGroupManager.getInstance()
-                                    .getNotificationGroup("ApkInstaller.NotificationGroup")
-                                    .createNotification(InstallerBundle.message("settings.download.failed"), e.message ?: "Unknown error", NotificationType.ERROR)
-                                    .notify(project)
-                            }
-                        }
-                    })
-                }) {
-                    Text(InstallerBundle.message("settings.download.button"))
-                }
-            }
-
-            if (detectedBundletoolPaths.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(InstallerBundle.message("settings.detected.label"), style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp))
-                    detectedBundletoolPaths.take(3).forEach { path ->
-                        Link(path, onClick = { bundletoolPathState.setTextAndPlaceCursorAtEnd(path) })
+                row(InstallerBundle.message("settings.bundletool.path.label")) {
+                    textFieldWithBrowseButton(project = project, fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFileDescriptor())
+                        .bindText(settings::bundletoolPath)
+                        .align(AlignX.FILL)
+                    button(InstallerBundle.message("settings.download.button")) {
+                        downloadBundletool()
                     }
                 }
+                row(InstallerBundle.message("settings.detected.label")) {
+                    val bundletoolHelper = BundletoolHelper()
+                    val btPaths = bundletoolHelper.findBundletoolPaths()
+                    btPaths.take(3).forEach { path ->
+                        cell(ActionLink(path) { settings.bundletoolPath = path })
+                    }
+                }
+            } // Removed .align(AlignX.FILL) here as group handles it or it's not applicable to group builder directly like this in some versions, but let's see. Actually, Align.FILL on the row or component is better.
+            
+            group(InstallerBundle.message("toolwindow.install.title")) {
+                row {
+                    label(InstallerBundle.message("toolwindow.select.file.text")).bold()
+                }
+                row {
+                    button("Select File") {
+                        selectAndInstallFile()
+                    }
+                }
+                row {
+                    comment(InstallerBundle.message("toolwindow.supports.text"))
+                }
             }
         }
-
-        Divider(Orientation.Horizontal)
-
-        Text(
-            text = InstallerBundle.message("toolwindow.install.title"),
-            style = JewelTheme.defaultTextStyle.copy(fontSize = 16.sp)
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(150.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .border(
-                    width = 2.dp,
-                    color = JewelTheme.globalColors.borders.normal,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .clickable(onClick = onFileSelect),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = InstallerBundle.message("toolwindow.select.file.text"),
-                    style = JewelTheme.defaultTextStyle.copy(fontSize = 14.sp),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = InstallerBundle.message("toolwindow.supports.text"),
-                    style = JewelTheme.defaultTextStyle.copy(fontSize = 12.sp, color = Color.Gray)
-                )
-            }
+        panel.registerValidators(this@MyToolWindowPanel)
+        
+        setContent(ScrollPaneFactory.createScrollPane(panel))
+    }
+    
+    private fun selectAndInstallFile() {
+        val descriptor = FileChooserDescriptorFactory.createSingleFileNoJarsDescriptor()
+            .withTitle("Select APK or AAB")
+            .withDescription("Choose an .apk or .aab file to install")
+                .withFileFilter { file -> file.extension?.lowercase() in listOf("apk", "aab") }
+        val file = FileChooser.chooseFile(descriptor, project, null)
+        if (file != null) {
+            handleFileInstall(project, File(file.path))
         }
+    }
+
+    
+    private fun downloadBundletool() {
+        ProgressManager.getInstance().run(object : Task.Backgroundable(project, InstallerBundle.message("settings.downloading.bundletool"), true) {
+            override fun run(indicator: ProgressIndicator) {
+                try {
+                    val file = BundletoolHelper().downloadBundletool(indicator)
+                    ApplicationManager.getApplication().invokeLater {
+                        settings.bundletoolPath = file.absolutePath
+                        // Need a way to refresh the UI if bound properties change manually
+                    }
+                } catch (e: Exception) {
+                    NotificationGroupManager.getInstance()
+                        .getNotificationGroup("ApkInstaller.NotificationGroup")
+                        .createNotification(InstallerBundle.message("settings.download.failed"), e.message ?: "Unknown error", NotificationType.ERROR)
+                        .notify(project)
+                }
+            }
+        })
+    }
+    
+    override fun dispose() {
+        scope.cancel()
+
     }
 }
+
 
 private fun handleFileInstall(project: Project, file: File) {
     if (!file.exists()) return
@@ -256,10 +190,11 @@ private fun handleFileInstall(project: Project, file: File) {
 
     if (extension == "aab") {
         val signingService = GradleSigningService(project)
-        val module = signingService.findModuleForFile(virtualFile.path)
-        val configs = if (module != null) signingService.getSigningConfigs(module) else emptyList()
+        val virtualFileForAab = VfsUtil.findFileByIoFile(file, true)
+        val module = if (virtualFileForAab != null) com.intellij.openapi.module.ModuleUtilCore.findModuleForFile(virtualFileForAab, project) else null
+        val configs = if (module != null) signingService.getSigningConfigs(module!!) else emptyList()
 
-        val dialog = AabInstallDialog(project, devices, configs)
+        val dialog = AabInstallDialog(project, devices, configs, virtualFile.path)
         if (!dialog.showAndGet()) return
         aabOptions = dialog.installOptions ?: return
         finalTargetDevices = aabOptions.selectedDevices
