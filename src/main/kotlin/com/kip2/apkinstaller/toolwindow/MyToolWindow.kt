@@ -70,6 +70,7 @@ class MyToolWindowPanel(private val project: Project) : SimpleToolWindowPanel(fa
                     cell(adbField)
                         .bindText(settings::adbPath)
                         .align(AlignX.FILL)
+                        .resizableColumn()
                 }
                 row(InstallerBundle.message("settings.detected.label")) {
                     val adbLocator = AdbLocator()
@@ -84,6 +85,7 @@ class MyToolWindowPanel(private val project: Project) : SimpleToolWindowPanel(fa
                     cell(btField)
                         .bindText(settings::bundletoolPath)
                         .align(AlignX.FILL)
+                        .resizableColumn()
                     button(InstallerBundle.message("settings.download.button")) {
                         downloadBundletool()
                     }

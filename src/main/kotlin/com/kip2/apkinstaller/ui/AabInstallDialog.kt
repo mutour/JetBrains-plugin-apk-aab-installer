@@ -99,7 +99,7 @@ class AabInstallDialog(
                     storePasswordField.text = config.storePassword ?: ""
                     keyAliasField.text = config.keyAlias ?: ""
                     keyPasswordField.text = config.keyPassword ?: ""
-                }.align(AlignX.FILL)
+                }.align(AlignX.FILL).resizableColumn()
                 button(InstallerBundle.message("signing.form.detect.button")) {
                     val virtualFile = LocalFileSystem.getInstance().findFileByPath(aabFilePath)
                     val module = if (virtualFile != null) ModuleUtilCore.findModuleForFile(virtualFile, project) else null
@@ -120,15 +120,15 @@ class AabInstallDialog(
                 }
             }
             row(InstallerBundle.message("signing.form.keystore.path")) {
-                cell(storeFileField).align(AlignX.FILL).applyToComponent {
+                cell(storeFileField).align(AlignX.FILL).resizableColumn().applyToComponent {
                     addBrowseFolderListener(null, null, project, FileChooserDescriptorFactory.createSingleFileDescriptor())
                 }
             }
-                    row(InstallerBundle.message("signing.form.keystore.password")) { cell(storePasswordField).align(AlignX.FILL) }
+            row(InstallerBundle.message("signing.form.keystore.password")) { cell(storePasswordField).align(AlignX.FILL).resizableColumn() }
             row(InstallerBundle.message("signing.form.key.alias")) {
-                cell(keyAliasField).align(AlignX.FILL)
+                cell(keyAliasField).align(AlignX.FILL).resizableColumn()
             }
-                    row(InstallerBundle.message("signing.form.key.password")) { cell(keyPasswordField).align(AlignX.FILL) }
+            row(InstallerBundle.message("signing.form.key.password")) { cell(keyPasswordField).align(AlignX.FILL).resizableColumn() }
             separator()
             row {
                 label(InstallerBundle.message("aab.install.parameters")).bold()
