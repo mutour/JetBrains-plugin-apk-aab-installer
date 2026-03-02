@@ -65,7 +65,9 @@ class MyToolWindowPanel(private val project: Project) : SimpleToolWindowPanel(fa
         val panel = panel {
             group(InstallerBundle.message("settings.environment.title")) {
                 row(InstallerBundle.message("settings.adb.path.label")) {
-                    textFieldWithBrowseButton(project = project, fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFileDescriptor())
+                    val adbField = com.intellij.openapi.ui.TextFieldWithBrowseButton()
+                    adbField.addBrowseFolderListener(null, null, project, FileChooserDescriptorFactory.createSingleFileDescriptor())
+                    cell(adbField)
                         .bindText(settings::adbPath)
                         .align(AlignX.FILL)
                 }
@@ -77,7 +79,9 @@ class MyToolWindowPanel(private val project: Project) : SimpleToolWindowPanel(fa
                     }
                 }
                 row(InstallerBundle.message("settings.bundletool.path.label")) {
-                    textFieldWithBrowseButton(project = project, fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFileDescriptor())
+                    val btField = com.intellij.openapi.ui.TextFieldWithBrowseButton()
+                    btField.addBrowseFolderListener(null, null, project, FileChooserDescriptorFactory.createSingleFileDescriptor())
+                    cell(btField)
                         .bindText(settings::bundletoolPath)
                         .align(AlignX.FILL)
                     button(InstallerBundle.message("settings.download.button")) {
