@@ -11,9 +11,14 @@
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
 
-    <depends>com.intellij.modules.externalSystem</depends>
-    <depends>com.intellij.modules.java</depends>
+    <depends optional="true" config-file="apkinstaller-gradle.xml">com.intellij.modules.externalSystem</depends>
 <!--    <depends optional="true" config-file="android-support.xml">org.jetbrains.android</depends>-->
+
+    <extensionPoints>
+        <extensionPoint name="signingConfigProvider"
+                        interface="com.kip2.apkinstaller.service.SigningConfigProvider"
+                        dynamic="true"/>
+    </extensionPoints>
 
     <resource-bundle>messages.InstallerBundle</resource-bundle>
 

@@ -1,0 +1,5 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="com.kip2.apkinstaller">
+        <signingConfigProvider implementation="com.kip2.apkinstaller.service.GradleSigningService"/>
+    </extensions>
+</idea-plugin>
