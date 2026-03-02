@@ -39,15 +39,20 @@ class AabInstaller(
 
             indicator.text = InstallerBundle.message("status.installing.to", device.name)
             indicator.fraction = 0.5 + index.toDouble() / devices.size * 0.5
-            if (options.allowIncompatibleUpdate) {
-                val packageName = getPackageName(bundletoolResult, aabFile)
-                if (packageName != null) {
-                    uninstallApp(adbPath, device, packageName)
-                }
-            }
+            
             // Ensure file is deleted even if installation fails
             try {
-                val result = installApks(adbPath, apksFile, device, options.updateExisting)
+                var result = installApks(adbPath, apksFile, device, options.updateExisting)
+                
+                if (!result.success && options.allowIncompatibleUpdate && isIncompatible(result.output)) {
+                    val packageName = getPackageName(bundletoolResult, aabFile)
+                    if (packageName != null) {
+                        indicator.text = InstallerBundle.message("status.uninstalling", device.name)
+                        uninstallApp(adbPath, device, packageName)
+                        result = installApks(adbPath, apksFile, device, options.updateExisting)
+                    }
+                }
+                
                 results.add(result)
             } finally {
                 if (apksFile.exists()) {
@@ -160,5 +165,15 @@ class AabInstaller(
             // Fallback: look for packageName: ...
             Regex("""packageName: ([^\s]+)""").find(stdout)?.groupValues?.get(1)
         }
+    }
+
+    private fun isIncompatible(output: String): Boolean {
+        val incompatKeys = listOf(
+            "INSTALL_FAILED_UPDATE_INCOMPATIBLE",
+            "INSTALL_FAILED_SHARED_USER_INCOMPATIBLE",
+            "INSTALL_FAILED_VERSION_DOWNGRADE",
+            "INCONSISTENT_CERTIFICATES"
+        )
+        return incompatKeys.any { output.contains(it) }
     }
 }

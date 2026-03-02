@@ -36,6 +36,7 @@ class AabInstallDialog(
     private val aabFilePath: String
 ) : DialogWrapper(project) {
 
+    private lateinit var mainPanel: com.intellij.openapi.ui.DialogPanel
     var installOptions: AabInstallOptions? = null
         private set
 
@@ -78,7 +79,7 @@ class AabInstallDialog(
         init()
     }
     override fun createCenterPanel(): JComponent {
-        return panel {
+        mainPanel = panel {
             row {
                 label(InstallerBundle.message("aab.install.select.devices")).bold()
             }
@@ -144,12 +145,13 @@ class AabInstallDialog(
             row {
                 checkBox(InstallerBundle.message("aab.install.allow.incompatible.update")).bindSelected(::allowIncompatibleUpdate)
             }
-        }.apply {
-            preferredSize = Dimension(750, 550)
         }
+        mainPanel.preferredSize = Dimension(750, 550)
+        return mainPanel
     }
 
     override fun doOKAction() {
+        mainPanel.apply()
         val selectedDevices = checkBoxes.filter { it.isSelected }.map { it.getClientProperty("device") as Device }
         val selectedConfig = configsModel.selectedItem as? SigningConfig
         val config = SigningConfig(
