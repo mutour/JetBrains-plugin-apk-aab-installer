@@ -189,10 +189,10 @@ private fun handleFileInstall(project: Project, file: File) {
     var finalTargetDevices = emptyList<Device>()
 
     if (extension == "aab") {
-        val signingService = GradleSigningService(project)
+        val signingService = GradleSigningService()
         val virtualFileForAab = VfsUtil.findFileByIoFile(file, true)
         val module = if (virtualFileForAab != null) com.intellij.openapi.module.ModuleUtilCore.findModuleForFile(virtualFileForAab, project) else null
-        val configs = if (module != null) signingService.getSigningConfigs(module!!) else emptyList()
+        val configs = if (module != null) signingService.getSigningConfigs(project, module!!) else emptyList()
 
         val dialog = AabInstallDialog(project, devices, configs, virtualFile.path)
         if (!dialog.showAndGet()) return

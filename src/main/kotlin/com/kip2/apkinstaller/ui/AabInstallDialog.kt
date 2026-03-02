@@ -101,7 +101,7 @@ class AabInstallDialog(
                 button(InstallerBundle.message("signing.form.detect.button")) {
                     val virtualFile = LocalFileSystem.getInstance().findFileByPath(aabFilePath)
                     val module = if (virtualFile != null) ModuleUtilCore.findModuleForFile(virtualFile, project) else null
-                    val detected = if (module != null) GradleSigningService(project).getSigningConfigs(module) else GradleSigningService(project).getAllSigningConfigs()
+                    val detected = if (module != null) GradleSigningService().getSigningConfigs(project, module) else GradleSigningService().getAllSigningConfigs(project)
                     configsModel.removeAllElements()
                     detected.forEach { configsModel.addElement(it) }
                     ProjectSigningSettings.getInstance(project).saveConfigs(detected)

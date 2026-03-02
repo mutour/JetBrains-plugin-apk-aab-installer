@@ -12,24 +12,16 @@ import com.kip2.apkinstaller.util.callMethod
 import com.kip2.apkinstaller.util.callMethodSafe
 import java.io.File
 
-data class SigningConfig(
-    val name: String,
-    val storeFile: String?,
-    val storePassword: String?,
-    val keyAlias: String?,
-    val keyPassword: String?,
-    val moduleName: String = "unknown"
-)
-
 /**
  * Professional service to extract signing information directly from the Gradle External System model.
  * robustly handling DataKey lookups without hard dependencies.
  */
-class GradleSigningService(private val project: Project) {
+class GradleSigningService : SigningConfigProvider {
 
     private val log: Logger = Logger.getInstance(GradleSigningService::class.java)
 
-    fun getSigningConfigs(module: Module): List<SigningConfig> {
+    override fun getSigningConfigs(project: Project, module: Module?): List<SigningConfig> {
+        if (module == null) return emptyList()
         return runReadAction {
             try {
                 val gradleSystemId = ProjectSystemId("GRADLE")
@@ -56,7 +48,7 @@ class GradleSigningService(private val project: Project) {
         }
     }
 
-    fun getAllSigningConfigs(): List<SigningConfig> {
+    override fun getAllSigningConfigs(project: Project): List<SigningConfig> {
         return runReadAction {
             val configs = mutableListOf<SigningConfig>()
             val gradleSystemId = ProjectSystemId("GRADLE")
@@ -137,11 +129,5 @@ class GradleSigningService(private val project: Project) {
         }
     }.getOrElse { emptyList() }
 
-    fun findModuleForFile(filePath: String): Module? {
-        return runReadAction {
-            val file = com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(filePath) ?: return@runReadAction null
-            log.info("Finding module for file: $filePath")
-            com.intellij.openapi.module.ModuleUtilCore.findModuleForFile(file, project)
-        }
-    }
+
 }
