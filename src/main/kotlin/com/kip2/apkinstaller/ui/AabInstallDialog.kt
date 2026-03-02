@@ -9,7 +9,8 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.*
-import com.kip2.apkinstaller.service.GradleSigningService
+import com.intellij.openapi.extensions.ExtensionPointName
+import com.kip2.apkinstaller.service.SigningConfigProvider
 import com.kip2.apkinstaller.settings.ProjectSigningSettings
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JComponent
@@ -101,7 +102,17 @@ class AabInstallDialog(
                 button(InstallerBundle.message("signing.form.detect.button")) {
                     val virtualFile = LocalFileSystem.getInstance().findFileByPath(aabFilePath)
                     val module = if (virtualFile != null) ModuleUtilCore.findModuleForFile(virtualFile, project) else null
-                    val detected = if (module != null) GradleSigningService().getSigningConfigs(project, module) else GradleSigningService().getAllSigningConfigs(project)
+                    
+                    val ep = ExtensionPointName.create<SigningConfigProvider>("com.kip2.apkinstaller.signingConfigProvider")
+                    val detected = mutableListOf<SigningConfig>()
+                    ep.extensionList.forEach { provider ->
+                        if (module != null) {
+                            detected.addAll(provider.getSigningConfigs(project, module))
+                        } else {
+                            detected.addAll(provider.getAllSigningConfigs(project))
+                        }
+                    }
+                    
                     configsModel.removeAllElements()
                     detected.forEach { configsModel.addElement(it) }
                     ProjectSigningSettings.getInstance(project).saveConfigs(detected)

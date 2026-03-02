@@ -28,7 +28,9 @@ import com.kip2.apkinstaller.model.Device
 import com.kip2.apkinstaller.service.AabInstaller
 import com.kip2.apkinstaller.service.ApkInstaller
 import com.kip2.apkinstaller.service.DeviceManager
-import com.kip2.apkinstaller.service.GradleSigningService
+import com.kip2.apkinstaller.service.SigningConfigProvider
+import com.intellij.openapi.extensions.ExtensionPointName
+import com.kip2.apkinstaller.service.SigningConfig
 import com.kip2.apkinstaller.settings.PluginSettings
 import com.kip2.apkinstaller.ui.AabInstallDialog
 import com.kip2.apkinstaller.ui.DeviceSelectionDialog
@@ -189,10 +191,16 @@ private fun handleFileInstall(project: Project, file: File) {
     var finalTargetDevices = emptyList<Device>()
 
     if (extension == "aab") {
-        val signingService = GradleSigningService()
         val virtualFileForAab = VfsUtil.findFileByIoFile(file, true)
         val module = if (virtualFileForAab != null) com.intellij.openapi.module.ModuleUtilCore.findModuleForFile(virtualFileForAab, project) else null
-        val configs = if (module != null) signingService.getSigningConfigs(project, module!!) else emptyList()
+        
+        val configs = mutableListOf<SigningConfig>()
+        if (module != null) {
+            val ep = ExtensionPointName.create<SigningConfigProvider>("com.kip2.apkinstaller.signingConfigProvider")
+            ep.extensionList.forEach { provider ->
+                configs.addAll(provider.getSigningConfigs(project, module))
+            }
+        }
 
         val dialog = AabInstallDialog(project, devices, configs, virtualFile.path)
         if (!dialog.showAndGet()) return
